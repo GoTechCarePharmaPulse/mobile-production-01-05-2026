@@ -1,0 +1,10 @@
+{
+  "login": "Login",
+  "password": "Password",
+  "mobile_email": "Mobile / Email",
+  "forgot_password": "Forgot Password?",
+  "tenant": "Tenant",
+  "platform": "Platform",
+  "change_company": "Change Company",
+  "invalid_credentials": "Please enter credentials"
+}

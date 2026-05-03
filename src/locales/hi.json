@@ -1,0 +1,10 @@
+{
+  "login": "लॉगिन",
+  "password": "पासवर्ड",
+  "mobile_email": "मोबाइल / ईमेल",
+  "forgot_password": "पासवर्ड भूल गए?",
+  "tenant": "टेनेंट",
+  "platform": "प्लेटफॉर्म",
+  "change_company": "कंपनी बदलें",
+  "invalid_credentials": "कृपया जानकारी भरें"
+}

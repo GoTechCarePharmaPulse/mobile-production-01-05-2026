@@ -1,0 +1,22 @@
+{
+  "build": {
+    "staging": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://pharmapulse-backend-production.up.railway.app/api"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.gotechcare.com/api"
+      }
+    }
+  }
+}
