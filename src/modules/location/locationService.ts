@@ -11,10 +11,12 @@ export const trackLocation = async (userId:string) => {
 
   const location = await Location.getCurrentPositionAsync({});
 
-  await api.post("/location/track", {
+  await api.post("/tracking/location", {
     userId,
     latitude: location.coords.latitude,
-    longitude: location.coords.longitude
+    longitude: location.coords.longitude,
+    accuracy: location.coords.accuracy,
+    recordedAt: new Date().toISOString(),
   });
 
 };

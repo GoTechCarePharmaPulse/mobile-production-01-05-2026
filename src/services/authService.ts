@@ -5,57 +5,114 @@ export const authService = {
   // ======================
   // LOGIN
   // ======================
-  login: async (identifier, password, companyCode, isPlatformLogin) => {
-  
+  login: async (
+    identifier,
+    password,
+    companyCodeFromUI,
+    isPlatformLogin = false
+  ) => {
+    // =========================================
+    // AUTO LOAD COMPANY CODE
+    // =========================================
 
-  let endpoint = "/auth/tenant/login";
+    let companyCode = companyCodeFromUI;
 
-if (isPlatformLogin) {
-  endpoint = "/auth/platform/login";
-}
+    if (!companyCode && !isPlatformLogin) {
+      companyCode =
+        await AsyncStorage.getItem(
+          "companyCode"
+        );
+    }
 
-const res = await client.post(endpoint, {
-  identifier,
-  password,
-  companyCode, // will be ignored for platform
-  isPlatformLogin,
+    // =========================================
+    // DETERMINE LOGIN TYPE
+    // =========================================
 
-});
+    let endpoint = "/auth/tenant/login";
 
-   console.log("LOGIN RESPONSE:", res.data);
+    // ONLY platform if explicitly requested
+    if (isPlatformLogin === true) {
+      endpoint = "/auth/platform/login";
+    }
 
-   console.log("LOGIN REQUEST:", {
-  identifier,
-  password,
-  companyCode,
-  isPlatformLogin,
-});
-   // ✅ SUPPORT BOTH FORMATS
+    // =========================================
+    // REQUEST BODY
+    // =========================================
 
-  const { accessToken, refreshToken, user } = res.data;
+    const payload = {
+      identifier,
+      password,
+    };
 
+    // ONLY tenant login needs companyCode
+    if (!isPlatformLogin) {
+      payload.companyCode = companyCode;
+    }
 
+    console.log("LOGIN REQUEST:", payload);
 
-  if (!accessToken) throw new Error("No token");
+    const res = await client.post(
+      endpoint,
+      payload
+    );
 
-  await AsyncStorage.setItem("accessToken", accessToken);
-  await AsyncStorage.setItem("refreshToken", refreshToken);
-  await AsyncStorage.setItem("user", JSON.stringify(user));
-  await AsyncStorage.setItem("companyCode", companyCode || "");
+    console.log(
+      "LOGIN RESPONSE:",
+      res.data
+    );
 
-  return { accessToken, refreshToken, user };
-},
+    const {
+      accessToken,
+      refreshToken,
+      user,
+    } = res.data;
 
+    if (!accessToken) {
+      throw new Error("No token");
+    }
 
+    // =========================================
+    // SAVE SESSION
+    // =========================================
+
+    await AsyncStorage.multiSet([
+      ["accessToken", accessToken],
+
+      [
+        "refreshToken",
+        refreshToken || "",
+      ],
+
+      ["user", JSON.stringify(user)],
+
+      [
+        "companyCode",
+        companyCode || "",
+      ],
+    ]);
+
+    return {
+      accessToken,
+      refreshToken,
+      user,
+    };
+  },
 
   // ======================
   // RESTORE SESSION
   // ======================
   restoreSession: async () => {
-    const token = await AsyncStorage.getItem("accessToken");
-    const user = await AsyncStorage.getItem("user");
+    const token =
+      await AsyncStorage.getItem(
+        "accessToken"
+      );
 
-    if (!token || !user) return null;
+    const user =
+      await AsyncStorage.getItem("user");
+
+    if (!token || !user) {
+      return null;
+    }
 
     return JSON.parse(user);
   },

@@ -1,10 +1,8 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable } from "react-native";
 
 export default function AppHeader({ title, onProfilePress }: any) {
   return (
-   <Pressable style={{ flex: 1 }} onPress={() => setMenuOpen(false)}>
     <View style={{
       flexDirection: "row",
       justifyContent: "space-between",
@@ -21,5 +19,4 @@ export default function AppHeader({ title, onProfilePress }: any) {
       </TouchableOpacity>
     </View>
   );
- </Pressable>
 }

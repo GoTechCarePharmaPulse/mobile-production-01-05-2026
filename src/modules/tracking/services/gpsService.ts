@@ -1,4 +1,4 @@
-import { api } from "@/api/api";
+import { api } from "../../../api/api";
 
 export const sendLocation = async (lat: number, lng: number) => {
   await api.post("/tracking/location", {

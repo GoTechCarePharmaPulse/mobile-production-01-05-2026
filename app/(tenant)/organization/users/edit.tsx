@@ -1,5 +1,13 @@
-import { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator  } from "react-native";
+import { useEffect, useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
+
 import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { userService } from "@/src/services/userService";
@@ -8,111 +16,309 @@ import { userFormSchema } from "@/src/schemas/userForm";
 import { createForm } from "@/src/engine/formEngine";
 import { useAuth } from "@/src/context/AuthContext";
 
-
 export default function EditUser() {
-
   const router = useRouter();
   const { id } = useLocalSearchParams();
 
   const { user: authUser, loading: authLoading } = useAuth();
-  const formEngine = createForm(userFormSchema);
 
-  const [values, setValues] = useState(formEngine.getInitialValues());
+  const [formEngine] = useState(() =>
+    createForm(userFormSchema)
+  );
+
+  const [values, setValues] = useState(
+    formEngine.getInitialValues()
+  );
+
   const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  // 🔥 FIX 3: Safety check AFTER state definitions
-  if (authLoading) return <ActivityIndicator style={{ flex: 1 }} />;
-  if (!authUser) {
-      Alert.alert("Error", "Session expired");
+  // ===============================
+  // AUTH CHECK
+  // ===============================
+
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      Alert.alert("Session Expired");
+
       router.replace("/login");
-      return null;
+    }
+  }, [authLoading, authUser]);
+
+  // ===============================
+  // LOADING UI
+  // ===============================
+
+  if (authLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator
+          size="large"
+          color="#16a34a"
+        />
+
+        <Text style={{ marginTop: 10 }}>
+          Checking session...
+        </Text>
+      </View>
+    );
   }
+
+  if (!authUser) return null;
 
   // ===============================
   // FETCH USER
   // ===============================
-  const fetchUser = async () => {
+
+  const fetchUser = useCallback(async () => {
     try {
-
       setLoading(true);
-      setValues(formEngine.getInitialValues());
 
-      const res = await userService.getUserById(id as string);
-      const userData = res?.data?.user || res?.data || res;
+      const res = await userService.getUserById(
+        id as string
+      );
 
-      if (!userData) throw new Error("No user data found");
+      const userData =
+        res?.user ||
+        res?.data?.user ||
+        res?.data ||
+        res;
+
+      if (!userData) {
+        throw new Error("User not found");
+      }
+
+      // ===============================
+      // SAFE GEO LOCATION
+      // ===============================
+
+      let safeGeoLocation = null;
+
+      if (
+        userData.geoLocation &&
+        Array.isArray(
+          userData.geoLocation.coordinates
+        ) &&
+        userData.geoLocation.coordinates.length === 2
+      ) {
+        const [lng, lat] =
+          userData.geoLocation.coordinates;
+
+        if (
+          typeof lat === "number" &&
+          typeof lng === "number" &&
+          !(lat === 0 && lng === 0)
+        ) {
+          safeGeoLocation = {
+            type: "Point",
+            coordinates: [lng, lat],
+          };
+        }
+      }
+
+      // ===============================
+      // BUILD FORM VALUES
+      // ===============================
+
       const mapped = {
-  ...formEngine.getInitialValues(), // fallback defaults
-  ...userData,
+        ...formEngine.getInitialValues(),
 
-   role: userData.role || "doctor",
-   assignedMR: userData.assignedMR?._id || userData.assignedMR || "",
+        firstName:
+          userData.firstName || "",
 
-   employmentStatus: userData.employmentStatus || "ACTIVE",
-   approvalStatus: userData.approvalStatus || "PENDING",
-   isActive: userData.isActive ?? true,
-   mustResetPassword: userData.mustResetPassword ?? false,
-   assignedMR: userData.assignedMR?._id || userData.assignedMR || null,
+        lastName:
+          userData.lastName || "",
 
-    assignedDoctors:
-    userData.assignedDoctors?.map((d) => d._id) || [],
+        mobile:
+          userData.mobile || "",
 
-  clinicLocation: userData.geoLocation?.coordinates
-  ? {
-      latitude: userData.geoLocation.coordinates[1],
-      longitude: userData.geoLocation.coordinates[0],
-    }
-  : null,
-};
+        email:
+          userData.email || "",
 
-setValues(mapped);
-     } catch (err) {
-      console.log("EDIT USER ERROR:", err);
-      Alert.alert("Error", "Failed to load user");
+        secondaryEmail:
+          userData.secondaryEmail || "",
+
+        role:
+          userData.role || "mr",
+
+        username:
+          userData.username || "",
+
+        region:
+          userData.region || "",
+
+        clinicName:
+          userData.clinicName || "",
+
+        specialization:
+          userData.specialization || "",
+
+        assignedMR:
+          userData.assignedMR?._id ||
+          userData.assignedMR ||
+          null,
+
+        assignedDoctors:
+          Array.isArray(
+            userData.assignedDoctors
+          )
+            ? userData.assignedDoctors.map(
+                (d: any) => d?._id || d
+              )
+            : [],
+
+        isActive:
+          userData.isActive ?? true,
+
+        isVerified:
+          userData.isVerified ?? false,
+
+        isLocked:
+          userData.isLocked ?? false,
+
+        mustResetPassword:
+          userData.mustResetPassword ??
+          false,
+
+        employmentStatus:
+          userData.employmentStatus ||
+          "ACTIVE",
+
+        approvalStatus:
+          userData.approvalStatus ||
+          "PENDING",
+
+        approvalNote:
+          userData.approvalNote || "",
+
+        // IMPORTANT:
+        // ONLY nested address object
+        address: {
+          line1:
+            userData.address?.line1 || "",
+
+          line2:
+            userData.address?.line2 || "",
+
+          landmark:
+            userData.address?.landmark ||
+            "",
+
+          area:
+            userData.address?.area || "",
+
+          city:
+            userData.address?.city || "",
+
+          state:
+            userData.address?.state || "",
+
+          country:
+            userData.address?.country ||
+            "",
+
+          pincode:
+            userData.address?.pincode ||
+            "",
+        },
+
+        geoLocation: safeGeoLocation,
+
+        password: "",
+        newPassword: "",
+      };
+
+      setValues(mapped);
+    } catch (err) {
+      console.log("FETCH USER ERROR:", err);
+
+      Alert.alert(
+        "Error",
+        "Failed to load user"
+      );
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    console.log("Fetching user with ID:", id); // Debug the ID
-    if (id) fetchUser();
-
-    return () => {
-      setValues(formEngine.getInitialValues());
-    };
   }, [id]);
 
- 
+  useEffect(() => {
+    if (id) {
+      fetchUser();
+    }
+  }, [id]);
+
   // ===============================
-  // BUILD CLEAN PAYLOAD (FINAL)
+  // BUILD PAYLOAD
   // ===============================
-  const buildPayload = (values) => {
+
+  const buildPayload = (values: any) => {
     const payload: any = {
-      firstName: formValues.firstName,
-      lastName: formValues.lastName,
-      mobile: formValues.mobile,
-      email: formValues.email,
-      role: formValues.role,
-      isActive: formValues.isActive,
-      employmentStatus: formValues.employmentStatus,
-      region: formValues.region,
-      assignedMR: formValues.assignedMR || null,
-      clinicName: formValues.clinicName,
-      specialization: formValues.specialization,
-      clinicAddress: formValues.clinicAddress,
+      firstName: values.firstName,
+      lastName: values.lastName,
+      mobile: values.mobile,
+      email: values.email,
+      role: values.role,
+      username: values.username,
+
+      region: values.region,
+
+      clinicName: values.clinicName,
+
+      specialization:
+        values.specialization,
+
+      assignedMR:
+        values.assignedMR || null,
+
+      assignedDoctors:
+        values.assignedDoctors || [],
+
+      isActive: values.isActive,
+
+      isVerified:
+        values.isVerified,
+
+      isLocked: values.isLocked,
+
+      mustResetPassword:
+        values.mustResetPassword,
+
+      employmentStatus:
+        values.employmentStatus,
+
+      approvalStatus:
+        values.approvalStatus,
+
+      approvalNote:
+        values.approvalNote,
+
+      address: values.address || {},
     };
 
-    // ❌ REMOVE PASSWORD (never send hashed)
-    if (payload.password?.startsWith("$2a$")) {
-      delete payload.password;
+    // PASSWORD RESET
+    if (values.newPassword) {
+      payload.newPassword =
+        values.newPassword;
     }
 
-    delete payload.resetPassword;
-    delete payload.location_picker;
+    // GEO LOCATION
+    if (
+      values.geoLocation &&
+      Array.isArray(
+        values.geoLocation.coordinates
+      )
+    ) {
+      payload.geoLocation =
+        values.geoLocation;
+    }
 
-    // ❌ REMOVE EMPTY
+    // CLEAN EMPTY FIELDS
     Object.keys(payload).forEach((key) => {
       if (
         payload[key] === "" ||
@@ -123,99 +329,140 @@ setValues(mapped);
       }
     });
 
-    // ✅ FORCE ROLE (CRITICAL FIX)
-    payload.role = payload.role || "mr";
+    // CLEAN ADDRESS
+    if (payload.address) {
+      Object.keys(payload.address).forEach(
+        (key) => {
+          if (
+            payload.address[key] === "" ||
+            payload.address[key] === null ||
+            payload.address[key] === undefined
+          ) {
+            delete payload.address[key];
+          }
+        }
+      );
 
-    // ✅ GEO FORMAT
-    if (formValues.clinicLocation?.latitude) {
-      payload.geoLocation = {
-        type: "Point",
-        coordinates: [
-          formValues.clinicLocation.longitude,
-          formValues.clinicLocation.latitude,
-        ],
-      };
+      if (
+        Object.keys(payload.address)
+          .length === 0
+      ) {
+        delete payload.address;
+      }
     }
 
-    return {
-    firstName: values.firstName,
-    lastName: values.lastName,
-    mobile: values.mobile,
-    email: values.email,
-    role: values.role,
-    isActive: values.isActive,
-    employmentStatus: values.employmentStatus,
-    approvalStatus: values.approvalStatus,
-    approvalNote: values.approvalNote,
-    region: values.region,
-
-    assignedDoctors: values.assignedDoctors || [],
-    assignedMR: values.assignedMR || null,
-
-    geoLocation: values?.clinicLocation
-      ? {
-          type: "Point",
-          coordinates: [
-            values.clinicLocation.longitude,
-            values.clinicLocation.latitude,
-          ],
-        }
-      : undefined,
-  };
+    return payload;
   };
 
   // ===============================
   // UPDATE USER
   // ===============================
-  const handleUpdate = async () => {
 
-    // ✅ ADD THIS BLOCK HERE
-  // Validation
-  if (values.role === "doctor" && !values.clinicLocation) {
-    Alert.alert("Required", "Please confirm the doctor's location on the map.");
-    return;
-  }
+  const handleUpdate = async () => {
+    if (saving) return;
+
+    const errors =
+      formEngine.validate(values);
+
+    if (Object.keys(errors).length > 0) {
+      Alert.alert(
+        "Validation Error",
+        Object.values(errors)[0] as string
+      );
+
+      return;
+    }
+
+    if (
+      values.role === "doctor" &&
+      !values.geoLocation
+    ) {
+      Alert.alert(
+        "Location Required",
+        "Please confirm doctor location."
+      );
+
+      return;
+    }
 
     try {
-      if (!values.role) {
-    Alert.alert("Role required");
-    return;
-  }
-      const payload = buildPayload(values);
-   
-        const res = await login(data);
+      setSaving(true);
 
-      console.log("FINAL PAYLOAD:", payload); // 🔍 DEBUG
+      const payload =
+        buildPayload(values);
 
-      await userService.updateUser(id as string, payload);
+      await userService.updateUser(
+        id as string,
+        payload
+      );
 
-      Alert.alert("Success", "User updated successfully");
+      Alert.alert(
+        "Success",
+        "User updated successfully"
+      );
+
       router.back();
     } catch (err: any) {
-      console.log("UPDATE ERROR:", err?.response?.data || err);
+      console.log(
+        "UPDATE ERROR:",
+        err?.response?.data || err
+      );
+
       Alert.alert(
         "Error",
-        err?.response?.data?.message || "Update failed"
+        err?.response?.data?.message ||
+          "Update failed"
       );
+    } finally {
+      setSaving(false);
     }
   };
 
   // ===============================
-  // UI
+  // LOADING USER
   // ===============================
+
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#16a34a" />
-        <Text style={{ marginTop: 10 }}>Loading user details...</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator
+          size="large"
+          color="#16a34a"
+        />
+
+        <Text style={{ marginTop: 10 }}>
+          Loading user...
+        </Text>
       </View>
     );
   }
 
+  // ===============================
+  // UI
+  // ===============================
+
   return (
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
-      <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 20, color: "#333" }}>
-        Edit User {values.role === 'doctor' ? 'Doctor' : 'User'}
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{
+        padding: 20,
+        paddingBottom: 120,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 22,
+          fontWeight: "bold",
+          marginBottom: 20,
+        }}
+      >
+        Edit User
       </Text>
 
       <FormRenderer
@@ -226,21 +473,32 @@ setValues(mapped);
       />
 
       <TouchableOpacity
+        disabled={saving}
         onPress={handleUpdate}
-        style={{ 
-          backgroundColor: "#16a34a", 
-          padding: 18, 
-          marginTop: 30, 
+        style={{
+          backgroundColor: saving
+            ? "#86efac"
+            : "#16a34a",
+
+          padding: 18,
           borderRadius: 12,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          elevation: 3
+          marginTop: 30,
         }}
       >
-        <Text style={{ color: "#fff", textAlign: "center", fontSize: 16, fontWeight: "600" }}>
-          Update User
-        </Text>
+        {saving ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text
+            style={{
+              color: "#fff",
+              textAlign: "center",
+              fontWeight: "600",
+              fontSize: 16,
+            }}
+          >
+            Update User
+          </Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );

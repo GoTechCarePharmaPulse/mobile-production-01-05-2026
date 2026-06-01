@@ -1,7 +1,8 @@
 import React from "react";
 import MapView, { Marker } from "react-native-maps";
 
-export default function MobileMap({markers}){
+export default function MobileMap({ markers = [], locations = [] }) {
+  const points = markers.length ? markers : locations;
 
   return(
 
@@ -15,14 +16,14 @@ export default function MobileMap({markers}){
       }}
     >
 
-      {markers.map((m,i)=>(
+      {points.map((m,i)=>(
         <Marker
           key={i}
           coordinate={{
-            latitude:m.latitude,
-            longitude:m.longitude
+            latitude: m.latitude ?? m.lat,
+            longitude: m.longitude ?? m.lng
           }}
-	  title={m.name}
+	  title={m.name || m.userName || "MR"}
         />
       ))}
 

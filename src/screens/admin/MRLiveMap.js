@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import UniversalMap from "../../components/maps/UniversalMap";
-import { api } from "../../api/client";
+import { api } from "../../api/api";
 
 export default function MRLiveMap() {
 
@@ -22,7 +22,7 @@ export default function MRLiveMap() {
 
   return (
 
-    <UniversalMap locations={locations} />
+    <UniversalMap markers={locations} />
 
   );
 

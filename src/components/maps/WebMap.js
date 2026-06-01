@@ -1,8 +1,9 @@
 import React from "react";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
-export default function WebMap({markers}){
+export default function WebMap({ markers = [], locations = [] }) {
+  const points = markers.length ? markers : locations;
 
   return(
 
@@ -17,14 +18,14 @@ export default function WebMap({markers}){
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      {markers.map((m,i)=>(
+      {points.map((m,i)=>(
         <Marker
           key={i}
-          position={[m.latitude,m.longitude]}
+          position={[m.latitude ?? m.lat, m.longitude ?? m.lng]}
         >
 
           <Popup>
-            {m.name}
+            {m.name || m.userName || "MR"}
           </Popup>
 
         </Marker>

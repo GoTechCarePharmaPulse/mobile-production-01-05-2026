@@ -92,11 +92,13 @@ export default function VisitsScreen() {
         err?.response?.data || err
       );
 
-      // ✅ STOP LOOP ON ERROR
-      setHasMore(false);
+      if (err?.message?.includes("Only MR")) {
+  setVisits([]);
+  setHasMore(false);
+  return;
+}
 
-      // ✅ SHOW EMPTY TABLE FOR ADMIN IF BLOCKED
-      setVisits([]);
+setHasMore(false);
 
     } finally {
       setLoading(false);
@@ -192,7 +194,7 @@ export default function VisitsScreen() {
               onPress: () =>
                 endVisit(item._id),
               show:
-                item.status === "ACTIVE",
+                item.status === "STARTED",
               color: "#f59e0b",
             },
           ]}
@@ -220,7 +222,7 @@ export default function VisitsScreen() {
 
       {/* STATUS */}
       <View style={styles.tabs}>
-        {["all", "ACTIVE", "COMPLETED"].map(
+        {["all", "STARTED", "COMPLETED"].map(
           (tab) => (
             <TouchableOpacity
               key={tab}

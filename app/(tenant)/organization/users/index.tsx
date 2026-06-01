@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   TextInput,
   FlatList,
+  ScrollView,
   StyleSheet,
   ActivityIndicator,
   Alert,
@@ -17,6 +18,8 @@ import { api } from "@/src/api/api";
 import { useAuth } from "@/src/context/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
 import ActionMenu from "@/src/components/common/ActionMenu";
+import { Dimensions } from "react-native";
+
 
 export default function UsersScreen() {
   const router = useRouter();
@@ -36,6 +39,9 @@ export default function UsersScreen() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [onEndReachedCalled, setOnEndReachedCalled] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false);
+  const [resetUser, setResetUser] = useState<any>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const screenHeight = Dimensions.get("window").height;
 
   const canCreate =
   user?.role === "admin" ||
@@ -112,22 +118,50 @@ export default function UsersScreen() {
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert("Delete User", "Are you sure?", [
-      { text: "Cancel" },
-      {
-        text: "Delete",
-        onPress: async () => {
+  Alert.alert("Delete User", "Are you sure?", [
+    { text: "Cancel" },
+    {
+      text: "Delete",
+      onPress: async () => {
+        try {
           await api.delete(`/users/${id}`);
+	   Alert.alert("Success", "User deleted successfully");
           fetchUsers(true);
-        },
+        } catch (err: any) {
+          console.log("DELETE ERROR:", err?.response?.data || err);
+          Alert.alert("Error", err?.response?.data?.message || "Delete failed");
+        }
       },
-    ]);
-  };
+    },
+  ]);
+};
 
-  const handleApprove = async (id: string) => {
-    await api.patch(`/users/${id}/approve`);
+ const handleApprove = async (id: string) => {
+  try {
+
+    console.log("APPROVING USER:", id);
+
+    const res = await api.patch(`/users/${id}/approve`);
+
+    console.log("APPROVE RESPONSE:", res.data);
+
+    Alert.alert("Success", "User approved");
+
     fetchUsers(true);
-  };
+
+  } catch (err: any) {
+
+    console.log(
+      "APPROVE ERROR:",
+      err?.response?.data || err
+    );
+
+    Alert.alert(
+      "Error",
+      err?.response?.data?.message || "Approve failed"
+    );
+  }
+};
 
   const handleReject = async (id: string) => {
     await api.patch(`/users/${id}/reject`);
@@ -157,111 +191,142 @@ export default function UsersScreen() {
 
 
 const handleToggleActive = async (item: any) => {
-  await api.patch(`/users/${item._id}/toggle-active`);
-  fetchUsers();
+  try {
+    await api.patch(`/users/${item._id}/toggle-active`);
+    fetchUsers();
+  } catch (err: any) {
+    console.log("TOGGLE ERROR:", err?.response?.data || err);
+    Alert.alert("Error", "Could not change status");
+  }
 };
+
+const handleResetPassword = async (item: any) => {
+  Alert.prompt(
+    "Reset Password",
+    `Enter new password for ${item.mobile}`,
+    async (password) => {
+      if (!password?.trim()) return;
+
+      try {
+        await api.put(`/users/${item._id}`, {
+          password,
+        });
+
+        Alert.alert("Success", "Password updated");
+      } catch (err: any) {
+        console.log("RESET ERROR:", err?.response?.data || err);
+
+        Alert.alert(
+          "Error",
+          err?.response?.data?.message || "Reset failed"
+        );
+      }
+    }
+  );
+};
+
 const exportToExcel = () => {
   console.log("Exporting users:", users);
   Alert.alert("Export started (hook backend later)");
 };
 
-  /* ================= RENDER ITEM ================= */
-  const renderItem = ({ item }: any) => (
-    <View  style={styles.tableRowContainer}>
-      {/* DATA ROW */}
-      <View style={styles.tableRow}>
-  <Text style={[styles.cell, { flex: 2 }]}>
-    {item.firstName} {item.lastName}
-  </Text>
+/* ================= ACTION MENU GENERATOR ================= */
+const getActions = (item: any) => {
+  if (!item || !user) return [];
 
-  <Text style={[styles.cell, { flex: 1.5 }]}>
-    {item.mobile}
-  </Text>
-
-  <Text style={[styles.cell, { flex: 1.5 }]}>
-    {item.role}
-  </Text>
-
- <Text style={[styles.cell, { flex: 1.5 }]}>
-  {item.isActive ? "ACTIVE" : "INACTIVE"}
-</Text>
-
-  <View style={{ flex: 1, alignItems: "flex-end" }}>
-        
-	{/* ================= Action Menu ================= */}
-      <ActionMenu
-  isOpen={openMenuId === item._id}
-  onToggle={() =>
-    setOpenMenuId(openMenuId === item._id ? null : item._id)
-  }
-  actions={[
+  return [
     {
       label: "Edit",
       onPress: () => handleEdit(item),
-      color: "#2563eb", // BLUE
-      show:
-    user?.role === "admin" ||
-    user?.role === "manager" ||
-    user?.role === "mr",
+      color: "#2563eb",
+      show: ["admin", "manager", "mr"].includes(user?.role),
     },
     {
       label: "Call",
       onPress: () => handleCall(item.mobile),
-      color: "#059669", // GREEN
+      color: "#059669",
     },
     {
       label: item.isActive ? "Deactivate" : "Activate",
       onPress: () => handleToggleActive(item),
-      color: "#f59e0b", // YELLOW
-      show:
-    user?.role === "admin" ||
-    user?.role === "manager",
+      color: "#f59e0b",
+      show: ["admin", "manager"].includes(user?.role),
     },
     {
       label: "Approve",
       onPress: () => handleApprove(item._id),
-      show: item.approvalStatus !== "APPROVED",
-      color: "green",
       show:
-    user?.role === "admin" ||
-    user?.role === "manager",
-
+        ["admin", "manager"].includes(user?.role) &&
+        item.approvalStatus !== "APPROVED",
+      color: "green",
     },
     {
       label: "Reject",
       onPress: () => handleReject(item._id),
-      show: item.approvalStatus === "APPROVED",
       color: "orange",
       show:
-    user?.role === "admin" ||
-    user?.role === "manager",
-
+        ["admin", "manager"].includes(user?.role) &&
+        item.approvalStatus !== "REJECTED",
     },
     {
       label: "Navigate",
       onPress: () => handleNavigate(item),
       show: item.role === "doctor",
-      color: "#0ea5e9", // SKY
+      color: "#0ea5e9",
     },
     {
       label: "Resend OTP",
       onPress: () => handleResendOTP(item.mobile),
-      color: "#6366f1", // INDIGO
+      color: "#6366f1",
     },
     {
       label: "Delete",
       onPress: () => handleDelete(item._id),
-      color: "#ef4444", // RED
-      show:
-    user?.role === "admin" ||
-    user?.role === "manager",
+      color: "#ef4444",
+      show: ["admin", "manager"].includes(user?.role),
     },
-  ]}
-  />
-  </View>
- </View>
+  ];
+};
+
+ /* ================= RENDER ITEM ================= */
+const renderItem = ({ item }: any) => {
+  // ✅ 1. Guard clause requires curly braces around the function body
+  if (!item || !user) return null;
+
+  return (
+    <View style={styles.tableRowContainer}>
+      <View style={styles.tableRow}>
+        <Text style={[styles.cell, { flex: 2 }]}>
+          {item.firstName} {item.lastName}
+        </Text>
+
+        <Text style={[styles.cell, { flex: 1.5 }]}>
+          {item.mobile}
+        </Text>
+
+        <Text style={[styles.cell, { flex: 1.5 }]}>
+          {item.role}
+        </Text>
+
+        <Text style={[styles.cell, { flex: 1.5 }]}>
+          {item.isActive ? "ACTIVE" : "INACTIVE"}
+        </Text>
+
+        <View style={{ flex: 1, alignItems: "flex-end" }}>
+  <TouchableOpacity
+    onPress={() =>
+      setOpenMenuId(openMenuId === item._id ? null : item._id)
+    }
+    style={{ padding: 5 }}
+  >
+    <Ionicons name="ellipsis-vertical" size={20} color="#333" />
+  </TouchableOpacity>
 </View>
-);
+      </View>
+    </View>
+  );
+};
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f7fb" }}>
@@ -354,6 +419,8 @@ onEndReached={() => {
       />
      </View>
 
+      
+
       {/* FAB */}
       {canCreate && (
         <TouchableOpacity
@@ -371,6 +438,46 @@ onEndReached={() => {
           <Text style={{ color: "#fff" }}>+ Create User</Text>
         </TouchableOpacity>
       )}
+
+	{/* ACTION MENU OVERLAY */}
+{openMenuId && (
+  <View style={styles.menuOverlay}>
+    <TouchableOpacity
+      style={StyleSheet.absoluteFill}
+      onPress={() => setOpenMenuId(null)}
+    />
+
+    <View style={styles.menuContainer}>
+      <ScrollView
+        style={{
+          maxHeight: Math.min(
+            Dimensions.get("window").height * 0.5,
+            getActions(users.find(u => u._id === openMenuId)).length * 50
+          ),
+        }}
+        contentContainerStyle={{ paddingVertical: 5 }}
+      >
+        {getActions(users.find(u => u._id === openMenuId))
+          .filter(a => a.show !== false)
+          .map((action, idx) => (
+            <TouchableOpacity
+              key={idx}
+              onPress={() => {
+                action.onPress();
+                setOpenMenuId(null);
+              }}
+              style={styles.menuItem}
+            >
+              <Text style={{ color: action.color || "#000" }}>
+                {action.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+      </ScrollView>
+    </View>
+  </View>
+)}
+
     </SafeAreaView>
   );
 }
@@ -467,4 +574,43 @@ const styles = StyleSheet.create({
     elevation: 5,      // Android
     zIndex: 999,       // iOS fix
   },
+  menuOverlay: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  justifyContent: "flex-start",
+  alignItems: "flex-end",
+  backgroundColor: "rgba(0,0,0,0.3)",
+  zIndex: 9999,
+  paddingTop: 50, // adjust based on header height
+  paddingRight: 16,
+},
+
+menuContainer: {
+  backgroundColor: "#fff",
+  borderRadius: 10,
+  minWidth: 200,
+  maxWidth: "80%",
+  elevation: 5,
+  zIndex: 10000,
+  overflow: "hidden",
+},
+
+menuItem: {
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderBottomWidth: 1,
+  borderBottomColor: "#eee",
+},
+
+menuCloseArea: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+},
+  
 });

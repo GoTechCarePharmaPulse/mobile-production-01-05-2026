@@ -1,4 +1,7 @@
 {
+  "cli": {
+    "appVersionSource": "remote"
+  },
   "build": {
     "staging": {
       "developmentClient": false,
@@ -7,15 +10,16 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://pharmapulse-backend-production.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL=https://pharmapulse-backend-rl2h.onrender.com/api"
       }
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.gotechcare.com/api"
+	"EXPO_PUBLIC_API_URL=https://pharmapulse-backend-rl2h.onrender.com/api"
+        "EXPO_USE_UPDATES": "false"
       }
     }
   }

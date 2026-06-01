@@ -4,7 +4,15 @@ import { router } from "expo-router";
 import { mrService } from "@/src/modules/mr/api/mrService";
 import usePermission from "@/src/hooks/usePermission";
 import { useState, useEffect } from "react";
-import { sendLiveLocation } from "@/src/utils/location";
+import {
+  sendLiveLocation,
+  startForegroundLocationTracking,
+  stopForegroundLocationTracking,
+} from "@/src/utils/location";
+import {
+  startBackgroundLocationTracking,
+  stopBackgroundLocationTracking,
+} from "@/src/services/backgroundSync";
 
 
 
@@ -23,13 +31,31 @@ export default function ViewMRs() {
   });
 
    useEffect(() => {
-  if (!trackingMR) return;
+  if (!trackingMR) {
+    stopForegroundLocationTracking();
+    return;
+  }
+
+  startForegroundLocationTracking({
+    timeInterval: 60000,
+    distanceInterval: 50,
+  }).catch((error) => {
+    console.log("MR foreground tracking failed:", error);
+    setTrackingMR(null);
+  });
+  startBackgroundLocationTracking().catch((error) => {
+    console.log("MR background tracking not available:", error);
+  });
 
   const interval = setInterval(() => {
     sendLiveLocation();
   }, 30 * 1000); // 🔥 testing (30 sec)
 
-  return () => clearInterval(interval);
+  return () => {
+    clearInterval(interval);
+    stopForegroundLocationTracking();
+    stopBackgroundLocationTracking();
+  };
 }, [trackingMR]);
 
   if (isLoading) {

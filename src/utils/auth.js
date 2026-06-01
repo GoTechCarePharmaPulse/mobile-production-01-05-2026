@@ -31,3 +31,40 @@ export const removeToken = async () => {
     await AsyncStorage.removeItem("accessToken");
   }
 };
+
+export const getCurrentUser = async () => {
+  const storedUser =
+    Platform.OS === "web"
+      ? localStorage.getItem("user")
+      : await AsyncStorage.getItem("user");
+
+  if (!storedUser) return null;
+
+  try {
+    return JSON.parse(storedUser);
+  } catch {
+    if (Platform.OS === "web") {
+      localStorage.removeItem("user");
+    } else {
+      await AsyncStorage.removeItem("user");
+    }
+
+    return null;
+  }
+};
+
+export const getStoredAuth = async () => {
+  const [accessToken, companyCode, user] = await Promise.all([
+    getToken(),
+    Platform.OS === "web"
+      ? Promise.resolve(localStorage.getItem("companyCode"))
+      : AsyncStorage.getItem("companyCode"),
+    getCurrentUser(),
+  ]);
+
+  return {
+    accessToken,
+    companyCode,
+    user,
+  };
+};

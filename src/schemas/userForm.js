@@ -70,8 +70,9 @@ export const userFormSchema = [
 },
   {
   name: "assignedDoctors",
-  label: "Assigned Doctor",
+  label: "Assigned Doctors",
   type: "select",
+  multiple: true,
   api: "/users?role=doctor", // 🔥 IMPORTANT
   optionLabel: "firstName",
   optionValue: "_id",
@@ -105,6 +106,8 @@ export const userFormSchema = [
   label: "Account Information",
   type: "label",
   section: "account",
+  showIf: () => false
+
 },
 
 // 🔵 USERNAME (CREATE ONLY)
@@ -114,25 +117,41 @@ export const userFormSchema = [
   type: "text",
   section: "account",
   required: true,
+  editable: false,
   permissions: {
-    view: ["users.create", "users.edit"],
-    edit: ["users.create"]
+    view: ["users.create", "users.update"],
+    edit: ["users.create", "users.update"]
   },
-  showIf: (values, mode) => mode === "create"
+  showIf: () => true
 },
 
 // 🔵 PASSWORD (CREATE ONLY)
 {
   name: "password",
   label: "Password",
-  type: "text",
+  type: "password",
   section: "account",
-  required: true,
+  required: false,
   permissions: {
-    view: ["users.create"],
-    edit: ["users.create"]
+    view: ["users.create", "users.update"],
+    edit: ["users.create", "users.update"] // allow editing if needed
   },
   showIf: (values, mode) => mode === "create"
+},
+
+// 🔵 NEW PASSWORD (RESET ONLY)
+{
+  name: "newPassword",
+  label: "New Password",
+  type: "password",
+  section: "account",
+  required: false,
+  permissions: {
+    edit: ["users.update"]
+  },
+  showIf: (values, mode) =>
+    mode === "edit" &&
+    values.mustResetPassword === true
 },
 
 // 🔵 ROLE (CREATE + EDIT)
@@ -148,8 +167,8 @@ export const userFormSchema = [
     { label: "Doctor", value: "doctor" },
   ],
   permissions: {
-    view: ["users.create", "users.edit"],
-    edit: ["users.create", "users.edit"]
+    view: ["users.create", "users.update"],
+    edit: ["users.create", "users.update"]
   },
   showIf: () => true
 },
@@ -159,10 +178,11 @@ export const userFormSchema = [
   name: "isActive",
   label: "Account Status",
   type: "boolean",
+  editable: true,
   section: "account",
   permissions: {
-    view: ["users.edit"],
-    edit: ["users.edit"]
+    view: ["users.update"],
+    edit: ["users.update"]
   },
   showIf: (values, mode) => mode === "edit"
 },
@@ -172,23 +192,11 @@ export const userFormSchema = [
   name: "mustResetPassword",
   label: "Force Reset Password",
   type: "boolean",
+  editable: true,
   section: "account",
   permissions: {
-    view: ["users.edit"],
-    edit: ["users.edit"]
-  },
-  showIf: (values, mode) => mode === "edit"
-},
-
-// 🔵 RESET PASSWORD BUTTON (EDIT ONLY)
-{
-  name: "resetPassword",
-  label: "Reset Password",
-  type: "button",
-  section: "account",
-  permissions: {
-    view: ["users.edit"],
-    edit: ["users.edit"]
+    view: ["users.update"],
+    edit: ["users.update"]
   },
   showIf: (values, mode) => mode === "edit"
 },
@@ -198,6 +206,7 @@ export const userFormSchema = [
   name: "employmentStatus",
   label: "Employment Status",
   type: "select",
+  editable: true,
   section: "account",
   options: [
     { label: "Active", value: "ACTIVE" },
@@ -205,10 +214,33 @@ export const userFormSchema = [
     { label: "Left", value: "LEFT" },
   ],
   permissions: {
-    view: ["users.edit"],
-    edit: ["users.edit"]
+    edit: ["users.update"],
   },
   showIf: (values, mode) => mode === "edit"
+},
+{
+  name: "isVerified",
+  label: "Verified User",
+  type: "boolean",
+  editable: true,
+  section: "account",
+    permissions: {
+    edit: ["users.update"],
+  },
+
+  showIf: (values, mode) => mode === "edit",
+}, 
+ {
+  name: "isLocked",
+  label: "Lock Account",
+  type: "boolean",
+  editable: true,
+  section: "account",
+  permissions: {
+    edit: ["users.update"],
+  },
+
+  showIf: (values, mode) => mode === "edit",
 },
 
 // 🔵 APPROVAL STATUS (EDIT ONLY)
@@ -216,6 +248,7 @@ export const userFormSchema = [
   name: "approvalStatus",
   label: "Approval Status",
   type: "select",
+  editable: true,
   section: "account",
   options: [
     { label: "Pending", value: "PENDING" },
@@ -223,8 +256,8 @@ export const userFormSchema = [
     { label: "Rejected", value: "REJECTED" },
   ],
   permissions: {
-    view: ["users.edit"],
-    edit: ["users.edit"]
+    view: ["users.update"],
+    edit: ["users.update"]
   },
   showIf: (values, mode) => mode === "edit"
 },
@@ -234,75 +267,83 @@ export const userFormSchema = [
   name: "approvalNote",
   label: "Approval Note",
   type: "text",
+  editable: true,
   section: "account",
   permissions: {
-    view: ["users.edit"],
-    edit: ["users.edit"]
+    view: ["users.update"],
+    edit: ["users.update"]
   },
   showIf: (values, mode) => mode === "edit"
 }, 
 
+// 🔵 RESET PASSWORD BUTTON (EDIT ONLY)
+{
+  name: "resetPassword",
+  label: "Reset Password",
+  type: "button",
+  section: "account",
+    permissions: {
+    edit: ["users.update"],
+  },
+  showIf: (values, mode) => mode === "edit"
+},
  
   // ================= ADDRESS =================
 
+   {
+  name: "address.line1",
+  label: "Address Line1",
+  type: "text",
+  section: "address"
+},
   {
-  name: "landmark",
+  name: "address.line2",
+  label: "Address Line2",
+  type: "text",
+  section: "address"
+},
+  {
+  name: "address.landmark",
   label: "Landmark",
   type: "text",
   section: "address"
 },
   {
-  name: "area",
+  name: "address.area",
   label: "Area",
   type: "text",
   section: "address"
 },
 
   {
-  name: "city",
+  name: "address.city",
   label: "City",
   type: "text",
   section: "address",
 },
   {
-  name: "state",
+  name: "address.state",
   label: "State",
   type: "text",
   section: "address",
 },
-
-{
-  name: "clinicAddress",
-  label: "Clinic Address",
+  {
+  name: "address.country",
+  label: "Country",
   type: "text",
-  section: "address",
-  showIf: { field: "role", equals: "doctor" },
+  section: "address"
 },
   {
+  name: "address.pincode",
+  label: "Pincode",
+  type: "text",
+  section: "address"
+},
+ {
   name: "geoLocation",
-  label: "Confirm Location",
-  type: "location", // Ensure your FormBuilder recognizes this type
-  section: "address",
-  showIf: (values) => values.role === "doctor",
-},
-  {
-  name: "location_picker",
-  label: "Pick Location",
-  type: "custom", // Or however your button is defined
-  section: "address",
-  showIf: { field: "role", equals: "doctor" } // 🚩 ONLY shown for doctors
-},
-   {
-  name: "clinicLocation",
   label: "Clinic Location",
-  type: "object",
   component: "LocationPicker",
   section: "address",
-  fields: {
-    latitude: "number",
-    longitude: "number",
-  },
   showIf: { field: "role", equals: "doctor" },
 },
-  
 ];

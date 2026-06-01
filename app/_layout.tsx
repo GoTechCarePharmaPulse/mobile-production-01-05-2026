@@ -4,6 +4,7 @@ import { View, Text, ActivityIndicator } from "react-native";
 import { useEffect } from "react";
 import { LogBox } from "react-native";
 import "@/src/i18n";
+import "@/src/services/backgroundSync";
 
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
 import { ThemeProvider } from "@/src/context/ThemeContext";

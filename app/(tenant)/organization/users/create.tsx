@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import {
   View,
   Text,
-  styles,
   TouchableOpacity,
   StyleSheet,
   Alert,
   ScrollView,
   KeyboardAvoidingView, 
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/src/api/api";
@@ -42,7 +42,7 @@ if (!user) return null;
   if (!values.role) errors.role = "Role required";
 
     // 🔥 FIX 2: Mandatory location for Doctor
-    if (values.role === "doctor" && !values.clinicLocation) {
+    if (values.role === "doctor" && !values.geoLocation) {
       return "Please confirm the doctor's location on the map.";
     }
   return errors;
@@ -59,7 +59,7 @@ if (!user) return null;
   return;
 }
   // ✅ ADD THIS BLOCK HERE
-  if (values.role === "doctor" && !values.clinicLocation) {
+  if (values.role === "doctor" && !values.geoLocation) {
     Alert.alert("Location required for doctor");
     return;
   }
@@ -74,15 +74,7 @@ if (!user) return null;
       ...values,
       role: values.role,
 
-      geoLocation: values?.clinicLocation
-        ? {
-            type: "Point",
-            coordinates: [
-              values.clinicLocation.longitude,
-              values.clinicLocation.latitude,
-            ],
-          }
-        : undefined,
+      geoLocation: values.geoLocation || undefined,
          assignedDoctors: values.assignedDoctors || null,
          assignedMR: values.assignedMR || null,
          employmentStatus: "ACTIVE",

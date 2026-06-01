@@ -21,7 +21,7 @@ export default function Login() {
   const router = useRouter(); // ✅ Fixed Hook Call
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [loginMode, setLoginMode] = useState<"tenant" | "platform">("tenant");
+  const [loginMode, setLoginMode] = useState<"tenant" | "platform" | null>(null);
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -31,17 +31,36 @@ export default function Login() {
 
   /* ================= LOAD TENANT ================= */
   useEffect(() => {
-    const loadTenant = async () => {
+  const loadTenant = async () => {
+    try {
       const data = await getTenant();
+
+      console.log("LOADED TENANT:", data);
+
       setTenant(data);
-      if (data?.loginMode) {
-        setLoginMode(data.loginMode);
+
+      // ✅ RESTORE SAVED LOGIN MODE
+      if (data?.loginMode === "platform") {
+        setLoginMode("platform");
+      } else {
+        setLoginMode("tenant");
       }
-    };
-    loadTenant();
-  }, []);
+
+    } catch (err) {
+      console.log("LOAD TENANT ERROR:", err);
+
+      setLoginMode("tenant");
+    }
+  };
+
+  loadTenant();
+}, []);
 
   /* ================= HELPERS ================= */
+
+  if (loginMode === null) {
+  return null;
+}
   const isPlatform = loginMode === "platform";
   const inputStyle = {
     borderWidth: 1,

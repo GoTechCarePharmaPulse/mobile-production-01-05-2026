@@ -1,6 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { API_URL } from "../config/api";
+import { Alert } from "react-native";
 
 const BASE_URL = API_URL;
 
@@ -43,20 +44,69 @@ client.interceptors.request.use(async (config) => {
 /* ================= RESPONSE ================= */
 
 client.interceptors.response.use(
-  (res) => res,
+  (response) => response,
+
   async (error) => {
     const originalRequest = error.config;
 
+    // Network issue
     if (!error.response) {
-      return Promise.reject({ message: "Network error" });
+      return Promise.reject({
+        message: "Network error",
+      });
     }
 
-    // 🔥 TOKEN EXPIRED
-    if (error.response.status === 401 && !originalRequest._retry) {
+    // Prevent refresh loop
+    if (
+      originalRequest?.url?.includes("/auth/refresh")
+    ) {
+      return Promise.reject(error);
+    }
+
+    // Handle 403
+    if (error.response.status === 403) {
+      console.warn(
+        "403 Forbidden:",
+        error.response?.data?.message
+      );
+
+      return Promise.reject(error.response.data);
+    }
+
+    // Handle 401
+    if (
+      error.response.status === 401 &&
+      !originalRequest._retry
+    ) {
       originalRequest._retry = true;
 
+      // Already refreshing → queue requests
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve,
+            reject,
+          });
+        })
+          .then((token) => {
+            originalRequest.headers =
+              originalRequest.headers || {};
+
+            originalRequest.headers.Authorization =
+              `Bearer ${token}`;
+
+            return client(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      isRefreshing = true;
+
       try {
-        const refreshToken = await AsyncStorage.getItem("refreshToken");
+        const refreshToken =
+          await AsyncStorage.getItem(
+            "refreshToken"
+          );
 
         if (!refreshToken) {
           throw new Error("No refresh token");
@@ -67,38 +117,54 @@ client.interceptors.response.use(
           { refreshToken }
         );
 
-        const newAccessToken = response.data.accessToken;
+        const newAccessToken =
+          response.data.accessToken;
 
-        await AsyncStorage.setItem("accessToken", newAccessToken);
+        await AsyncStorage.setItem(
+          "accessToken",
+          newAccessToken
+        );
 
         client.defaults.headers.common[
           "Authorization"
         ] = `Bearer ${newAccessToken}`;
 
-        originalRequest.headers[
-          "Authorization"
-        ] = `Bearer ${newAccessToken}`;
+        processQueue(null, newAccessToken);
 
-        return client(originalRequest); // 🔁 retry
+        originalRequest.headers =
+          originalRequest.headers || {};
 
-      } catch (err) {
+        originalRequest.headers.Authorization =
+          `Bearer ${newAccessToken}`;
+
+        return client(originalRequest);
+
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+
         console.log("❌ REFRESH FAILED");
 
         await AsyncStorage.multiRemove([
           "accessToken",
           "refreshToken",
           "user",
- 	  "companyCode",
+          "companyCode",
         ]);
 
         return Promise.reject({
-          message: "Session expired. Please login again.",
+          message:
+            "Session expired. Please login again.",
           status: 401,
         });
+
+      } finally {
+        isRefreshing = false;
       }
     }
 
-    return Promise.reject(error.response.data || error);
+    return Promise.reject(
+      error.response?.data || error
+    );
   }
 );
 

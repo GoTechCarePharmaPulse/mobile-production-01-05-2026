@@ -1,220 +1,498 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
-import { useAuth } from "@/src/context/AuthContext";
-import { api } from "@/src/api/api";
-import { DrawerContentScrollView } from "@react-navigation/drawer";
-import { Ionicons } from "@expo/vector-icons";
-import { routeMap } from "@/src/utils/routeMapper";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
 
-export default function DrawerContent() {
-  const { user } = useAuth();
-  const router = useRouter();
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-  const [menus, setMenus] = useState([]);
-  const [loadingMenus, setLoadingMenus] = useState(false);
-  const [openMenus, setOpenMenus] = useState({});
+import {
+  DrawerContentScrollView,
+} from "@react-navigation/drawer";
 
-  // ✅ SAFE NAVIGATION (FIXED)
-  const safeNavigate = (rawPath) => {
-  if (!rawPath) {
-    console.warn("🚫 Navigation blocked: Path is empty");
-    return;
-  }
+import {
+  Ionicons,
+} from "@expo/vector-icons";
 
-  let finalPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
-  finalPath = finalPath.replace(/\/+/g, "/");
+import {
+  useRouter,
+} from "expo-router";
 
-  try {
-    router.push(finalPath); // ✅ CORRECT
-  } catch (err) {
-    console.error("🚀 Navigation Crash Avoided:", err.message);
-  }
+import {
+  useAuth,
+} from "@/src/context/AuthContext";
+
+import {
+  api,
+} from "@/src/api/api";
+
+type MenuItem = {
+  title: string;
+  path?: string;
+  icon?: string;
+  permission?: string;
+  badge?: number;
+  children?: MenuItem[];
 };
 
-  // ✅ NORMALIZE PATH
-  const normalizePath = (path?: string) => {
-    if (!path) return null;
+export default function DrawerContent() {
 
-    return path
-      .replace(/^\/+/, "")
-      .replace(/\/index$/, "")
-      .toLowerCase();
-  };
+  const { user } = useAuth();
 
-  // ✅ FETCH MENUS
-  useEffect(() => {
-    if (!user) return;
+  const router = useRouter();
 
-    const fetchMenus = async () => {
-      try {
-        setLoadingMenus(true);
+  const [menus, setMenus] =
+    useState<MenuItem[]>([]);
 
-        const res = await api.get("/menu");
-        const apiMenus = res.data || [];
+  const [loading, setLoading] =
+    useState(false);
 
-        // remove duplicates
-        const uniqueMenus = Array.from(
-          new Map(apiMenus.map((m) => [m.title, m])).values()
+  const [openMenus, setOpenMenus] =
+    useState<Record<string, boolean>>({});
+
+  /* =========================
+     SAFE NAVIGATION
+  ========================= */
+
+  const safeNavigate = (
+    path?: string
+  ) => {
+
+    if (!path) {
+      console.warn(
+        "Navigation blocked: Empty path"
+      );
+      return;
+    }
+
+    try {
+
+      let finalPath = path;
+
+      if (
+        !finalPath.startsWith("/")
+      ) {
+        finalPath =
+          `/${finalPath}`;
+      }
+
+      finalPath =
+        finalPath.replace(
+          /\/+/g,
+          "/"
         );
 
-        setMenus(uniqueMenus);
-      } catch (err) {
-        console.log("❌ Menu error", err);
-        setMenus([]);
-      } finally {
-        setLoadingMenus(false);
-      }
-    };
+      console.log(
+        "➡️ Navigate:",
+        finalPath
+      );
 
-    fetchMenus();
-  }, [user]);
+      router.push(
+        finalPath as any
+      );
 
-  // ✅ PERMISSION CHECK
-  const hasPermission = (permission?: string) => {
-    if (!permission) return true;
+    } catch (err: any) {
 
-    if (user?.permissions?.includes("ALL")) return true;
-    if (user?.role === "admin") return true;
-
-    return user?.permissions?.includes(permission);
+      console.log(
+        "Navigation Error:",
+        err?.message
+      );
+    }
   };
 
-  const filteredMenus = menus.filter((menu) =>
-    hasPermission(menu.permission)
-  );
+  /* =========================
+     PERMISSION CHECK
+  ========================= */
 
-  const toggleMenu = (title: string) => {
+  const hasPermission = (
+    permission?: string
+  ) => {
+
+    if (!permission) {
+      return true;
+    }
+
+    if (
+      user?.role === "admin"
+    ) {
+      return true;
+    }
+
+    if (
+      user?.permissions?.includes(
+        "ALL"
+      )
+    ) {
+      return true;
+    }
+
+    return (
+      user?.permissions?.includes(
+        permission
+      ) || false
+    );
+  };
+
+  /* =========================
+     STATIC FALLBACK MENUS
+  ========================= */
+
+  const staticMenus: MenuItem[] = [
+
+    {
+      title: "Dashboard",
+      icon: "grid-outline",
+      path: "/dashboard",
+    },
+
+    {
+      title: "CRM",
+      icon: "briefcase-outline",
+      children: [
+
+        {
+          title: "Doctors",
+          path: "/(tenant)/crm/doctors",
+          icon: "medkit-outline",
+        },
+
+        {
+          title: "Visits",
+          path: "/(tenant)/crm/visits",
+          icon: "calendar-outline",
+        },
+
+        {
+          title: "Live Tracking",
+          path: "/(tenant)/crm/live-tracking",
+          icon: "location-outline",
+        },
+
+        {
+          title: "Orders",
+          path: "/(tenant)/crm/orders",
+          icon: "cart-outline",
+        },
+      ],
+    },
+  ];
+
+  /* =========================
+     FETCH API MENUS
+  ========================= */
+
+  useEffect(() => {
+
+    if (!user) {
+      return;
+    }
+
+    const fetchMenus =
+      async () => {
+
+        try {
+
+          setLoading(true);
+
+          const res =
+            await api.get(
+              "/menu"
+            );
+
+          const apiMenus =
+            Array.isArray(
+              res.data
+            )
+              ? res.data
+              : [];
+
+          setMenus(apiMenus);
+
+        } catch (err) {
+
+          console.log(
+            "Menu API failed, using fallback"
+          );
+
+          setMenus([]);
+
+        } finally {
+
+          setLoading(false);
+        }
+      };
+
+    fetchMenus();
+
+  }, [user]);
+
+  /* =========================
+     FINAL MENUS
+  ========================= */
+
+  const finalMenus =
+    useMemo(() => {
+
+      const combined =
+  menus.length > 0
+    ? menus
+    : staticMenus;
+
+      return combined.filter(
+        (menu) =>
+          hasPermission(
+            menu.permission
+          )
+      );
+
+    }, [menus, user]);
+
+  /* =========================
+     TOGGLE MENU
+  ========================= */
+
+  const toggleMenu = (
+    title: string
+  ) => {
+
     setOpenMenus((prev) => ({
       ...prev,
-      [title]: !prev[title],
+      [title]:
+        !prev[title],
     }));
   };
 
-  if (!user) return null;
-
-  // ✅ EMPTY STATE
-  if (!loadingMenus && filteredMenus.length === 0) {
-    return (
-      <DrawerContentScrollView>
-        <View style={{ padding: 20 }}>
-          <Text>No menu available</Text>
-        </View>
-      </DrawerContentScrollView>
-    );
+  if (!user) {
+    return null;
   }
 
   return (
     <DrawerContentScrollView>
-      <View style={{ padding: 20 }}>
 
-        {/* USER HEADER */}
-        <View style={{ marginBottom: 20, borderBottomWidth: 1, borderBottomColor: "#eee", paddingBottom: 10 }}>
-          <Text style={{ fontWeight: "bold", fontSize: 16 }}>
-            {user.firstName} {user.lastName}
+      <View style={styles.container}>
+
+        {/* =========================
+            USER HEADER
+        ========================= */}
+
+        <View style={styles.header}>
+
+          <Text style={styles.name}>
+            {user?.firstName || ""}
+            {" "}
+            {user?.lastName || ""}
           </Text>
-          <Text style={{ color: "#666", fontSize: 12 }}>
-            {user.role?.toUpperCase()}
+
+          <Text style={styles.role}>
+            {user?.role?.toUpperCase()}
           </Text>
         </View>
 
-        {loadingMenus && <Text>Loading menus...</Text>}
+        {/* =========================
+            LOADING
+        ========================= */}
 
-        {!loadingMenus &&
-          filteredMenus.map((menu) => {
-            const key = normalizePath(menu.path);
+        {loading && (
+          <ActivityIndicator />
+        )}
 
-            const finalPath =
-              routeMap[key] ||
-              routeMap[`platform/${key}`] ||
-              null;
+        {/* =========================
+            MENUS
+        ========================= */}
+
+        {finalMenus.map(
+          (menu, index) => {
+
+            const hasChildren =
+              menu.children &&
+              menu.children.length > 0;
 
             return (
-              <View key={menu.title} style={{ marginBottom: 10 }}>
 
-                {/* PARENT */}
+              <View
+                key={`${menu.title}-${index}`}
+                style={{
+                  marginBottom: 8,
+                }}
+              >
+
                 <TouchableOpacity
+                  style={styles.menuItem}
                   onPress={() => {
-                    if (menu.children?.length) {
-                      toggleMenu(menu.title);
+
+                    if (
+                      hasChildren
+                    ) {
+
+                      toggleMenu(
+                        menu.title
+                      );
+
                     } else {
-                      if (!finalPath) {
-                        console.warn("❌ Missing route:", menu.path);
-                        return;
-                      }
-                      safeNavigate(finalPath);
+
+                      safeNavigate(
+                        menu.path
+                      );
                     }
                   }}
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    paddingVertical: 10,
-                  }}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-  <Ionicons
-    name={menu.icon || "ellipse-outline"}
-    size={18}
-    color="#2563eb"
-    style={{ marginRight: 10 }}
-  />
 
-  <Text style={{ fontWeight: "bold" }}>
-    {menu.title}
-  </Text>
+                  <View
+                    style={
+                      styles.menuLeft
+                    }
+                  >
 
-  {/* ✅ BADGE */}
-  {menu.badge > 0 && (
-    <View
-      style={{
-        backgroundColor: "red",
-        borderRadius: 10,
-        paddingHorizontal: 6,
-        marginLeft: 8,
-      }}
-    >
-      <Text style={{ color: "#fff", fontSize: 10 }}>
-        {menu.badge}
-      </Text>
-    </View>
-  )}
-</View>
+                    <Ionicons
+                      name={
+                        (menu.icon ||
+                          "ellipse-outline") as any
+                      }
+                      size={20}
+                      color="#2563eb"
+                    />
 
-                  {menu.children?.length > 0 && (
-                    <Text>{openMenus[menu.title] ? "▲" : "▼"}</Text>
+                    <Text
+                      style={
+                        styles.menuText
+                      }
+                    >
+                      {menu.title}
+                    </Text>
+                  </View>
+
+                  {hasChildren && (
+
+                    <Ionicons
+                      name={
+                        openMenus[
+                          menu.title
+                        ]
+                          ? "chevron-up"
+                          : "chevron-down"
+                      }
+                      size={18}
+                      color="#666"
+                    />
                   )}
                 </TouchableOpacity>
 
-                {/* CHILDREN */}
-                {openMenus[menu.title] &&
-                  menu.children?.map((child) => {
-                    const childKey = normalizePath(child.path);
+                {/* =========================
+                    CHILDREN
+                ========================= */}
 
-                    const childPath =
-                      routeMap[childKey] ||
-                      routeMap[`platform/${childKey}`] ||
-                      null;
+                {openMenus[
+                  menu.title
+                ] &&
+                  menu.children?.map(
+                    (
+                      child,
+                      idx
+                    ) => (
 
-                    return (
                       <TouchableOpacity
-                        key={child.title}
-                        onPress={() => {
-                          if (!childPath) {
-                            console.warn("❌ Missing child route:", child.path);
-                            return;
-                          }
-                          safeNavigate(childPath);
-                        }}
-                        style={{ marginLeft: 25, paddingVertical: 6 }}
+                        key={`${child.title}-${idx}`}
+                        style={
+                          styles.childItem
+                        }
+                        onPress={() =>
+                          safeNavigate(
+                            child.path
+                          )
+                        }
                       >
-                        <Text>{child.title}</Text>
+
+                        <Ionicons
+                          name={
+                            (child.icon ||
+                              "chevron-forward-outline") as any
+                          }
+                          size={16}
+                          color="#666"
+                        />
+
+                        <Text
+                          style={
+                            styles.childText
+                          }
+                        >
+                          {child.title}
+                        </Text>
                       </TouchableOpacity>
-                    );
-                  })}
+                    )
+                  )}
               </View>
             );
-          })}
+          }
+        )}
       </View>
     </DrawerContentScrollView>
   );
 }
+
+const styles =
+  StyleSheet.create({
+
+    container: {
+      padding: 20,
+    },
+
+    header: {
+      marginBottom: 20,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor:
+        "#eee",
+    },
+
+    name: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: "#111",
+    },
+
+    role: {
+      marginTop: 4,
+      fontSize: 12,
+      color: "#666",
+    },
+
+    menuItem: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+      alignItems: "center",
+      paddingVertical: 12,
+    },
+
+    menuLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+
+    menuText: {
+      marginLeft: 10,
+      fontSize: 15,
+      fontWeight: "600",
+      color: "#222",
+    },
+
+    childItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginLeft: 28,
+      paddingVertical: 8,
+    },
+
+    childText: {
+      marginLeft: 8,
+      fontSize: 14,
+      color: "#444",
+    },
+  });

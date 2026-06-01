@@ -56,6 +56,11 @@ export default function CompanyLayout() {
         {hasPermission(user, PERMISSIONS.crm?.view) && (
           <Drawer.Screen name="crm/visits/index" options={{ title: "Visit Logs" }} />
         )}
+
+	{hasPermission(user, PERMISSIONS.crm?.view) && (
+ 	 <Drawer.Screen name="crm/live-tracking/index" options={{ title: "Live Tracking" }} />
+	)}
+
       </Drawer>
 
       {/* ✅ 3. Enhanced Dropdown Menu */}

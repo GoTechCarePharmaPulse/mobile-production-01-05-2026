@@ -1,5 +1,6 @@
-import { ROLES } from "@/src/config/roles";
-import { PERMISSIONS } from "@/src/config/permissions";
+import { PERMISSIONS } from "../config/permissions";
+
+const ALL_PERMISSIONS = ["*"];
 
 /**
  * Get permissions from role
@@ -9,27 +10,56 @@ export const getRolePermissions = (role: string) => {
 
   switch (role) {
     case "super_admin":
-      return PERMISSIONS.ALL;
+      return ALL_PERMISSIONS;
 
     case "admin":
-    PERMISSIONS.VIEW_USERS,
-    PERMISSIONS.VIEW_CRM,
-    PERMISSIONS.VIEW_INVENTORY,
-  ];
+      return [
+        PERMISSIONS.users.view,
+        PERMISSIONS.users.create,
+        PERMISSIONS.users.update,
+        PERMISSIONS.users.delete,
+        PERMISSIONS.crm.view,
+        PERMISSIONS.inventory.view,
+        PERMISSIONS.finance.view,
+      ];
 
     case "manager":
-      return PERMISSIONS.MANAGER;
+      return [
+        PERMISSIONS.users.view,
+        PERMISSIONS.crm.view,
+        PERMISSIONS.finance.view,
+      ];
 
     case "mr":
-      return PERMISSIONS.MR;
+      return [
+        PERMISSIONS.crm.view,
+      ];
 
     case "doctor":
-      return PERMISSIONS.DOCTOR;
+      return [
+        PERMISSIONS.crm.view,
+      ];
 
     case "distributor":
-      return PERMISSIONS.DISTRIBUTOR;
+      return [
+        PERMISSIONS.inventory.view,
+      ];
 
     default:
       return [];
   }
+};
+
+export const hasPermission = (user: any, permission?: string) => {
+  if (!permission) return false;
+
+  const permissions = user?.permissions || getRolePermissions(user?.role);
+
+  return permissions.includes("*") || permissions.includes(permission);
+};
+
+export const hasRole = (user: any, roles: string | string[]) => {
+  const allowedRoles = Array.isArray(roles) ? roles : [roles];
+
+  return allowedRoles.includes(user?.role);
 };

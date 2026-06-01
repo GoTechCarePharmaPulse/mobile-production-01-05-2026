@@ -1,16 +1,18 @@
-import io from "socket.io-client";
-import { socket } from "./socket";
+import { sendTrackingPoint } from "../utils/location";
 
-import { SOCKET_URL } from "../config/api";
+export const sendLocation = async (
+  userId: string,
+  latitude: number,
+ longitude: number,
+  accuracy: number | null = null
+) => {
 
-const socket = io(SOCKET_URL);
-
-export const sendLocation = (userId, latitude, longitude) => {
-
-  socket.emit("mr-location",{
+  return sendTrackingPoint({
     userId,
     latitude,
-    longitude
+    longitude,
+    accuracy,
+    recordedAt:
+      new Date().toISOString(),
   });
-
 };

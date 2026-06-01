@@ -3,44 +3,121 @@
     "name": "PharmaPulse",
     "slug": "pharmapulse",
     "version": "1.0.0",
+
     "orientation": "portrait",
+
     "icon": "./src/assets/branding/app-icon.png",
+
     "scheme": "mobile",
+
     "userInterfaceStyle": "automatic",
+
     "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
+
+    "updates": {
+      "enabled": false
     },
+
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+
+    "ios": {
+      "supportsTablet": true,
+
+      "bundleIdentifier": "com.techareadmin.pharmapulse",
+
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ],
+
+        "NSLocationWhenInUseUsageDescription": "PharmaPulse uses your location to show nearby doctors and start visits.",
+
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "PharmaPulse tracks MR routes during working hours for visit analysis.",
+
+        "NSLocationAlwaysUsageDescription": "PharmaPulse tracks MR routes during working hours for visit analysis."
+      }
+    },
+
     "android": {
+      "package": "com.techare_admin.pharmapulse",
+
+      "versionCode": 1,
+
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "WAKE_LOCK"
+      ],
+
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#E6F4FE"
       },
+
       "edgeToEdgeEnabled": true,
+
       "predictiveBackGestureEnabled": false
     },
+
     "plugins": [
       "expo-router",
+
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true,
+
+          "locationWhenInUsePermission": "PharmaPulse uses your location to show nearby doctors and start visits.",
+
+          "locationAlwaysAndWhenInUsePermission": "PharmaPulse tracks MR routes during working hours for visit analysis."
+        }
+      ],
+
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#ffffff"
         }
       ],
+
       "expo-secure-store",
+
       "expo-sqlite"
     ],
+
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+
+    "extra": {
+      "router": {},
+
+      "eas": {
+        "projectId": "1d1824cc-7013-44aa-8a8a-efb40eac65ab"
+      }
+    },
+
+    "owner": "techare_admin",
+
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

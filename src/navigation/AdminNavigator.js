@@ -1,28 +1,23 @@
-<Route
- name="MRRoutePlanner"
- component={RoutePlannerScreen}
-/>
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-<Route
- name="DoctorPrediction"
- component={DoctorPredictionScreen}
-/>
+import RoutePlannerScreen from "../screens/mr/RoutePlannerScreen";
+import DoctorPredictionScreen from "../screens/admin/DoctorPredictionScreen";
+import TerritoryHeatmap from "../screens/admin/TerritoryHeatmapScreen";
+import AnalyticsDashboard from "../screens/admin/AnalyticsDashboard";
+import DoctorInfluenceGraph from "../screens/admin/DoctorInfluenceGraph";
 
-<Route
- name="TerritoryHeatmap"
- component={TerritoryHeatmap}
-/>
-<Route
- name="AnalyticsDashboard"
- component={AnalyticsDashboard}
-/>
+const Stack = createNativeStackNavigator();
 
-<Route
- name="DoctorInfluence"
- component={DoctorInfluenceGraph}
-/>
-
-<Route
- name="RoutePlanner"
- component={RoutePlannerScreen}
-/>
+export default function AdminNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MRRoutePlanner" component={RoutePlannerScreen} />
+      <Stack.Screen name="DoctorPrediction" component={DoctorPredictionScreen} />
+      <Stack.Screen name="TerritoryHeatmap" component={TerritoryHeatmap} />
+      <Stack.Screen name="AnalyticsDashboard" component={AnalyticsDashboard} />
+      <Stack.Screen name="DoctorInfluence" component={DoctorInfluenceGraph} />
+      <Stack.Screen name="RoutePlanner" component={RoutePlannerScreen} />
+    </Stack.Navigator>
+  );
+}

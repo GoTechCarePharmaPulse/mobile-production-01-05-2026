@@ -1,119 +1,51 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
 import { router } from "expo-router";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import client from "@/src/api/client";
+
 import { authService } from "@/src/services/authService";
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+
   const [loading, setLoading] = useState(true);
- 
 
-   // ✅ RESTORE SESSION (REQUIRED)
-  const restoreSession = async () => {
-    const storedUser = await AsyncStorage.getItem("user");
+  // ============================================
+  // APPLY SESSION TO AXIOS
+  // ============================================
 
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      setUser(parsed);
-      return parsed;
+  const applySession = ({
+    accessToken,
+    companyCode,
+  }) => {
+    if (accessToken) {
+      client.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${accessToken}`;
     }
 
-    return null;
+    if (companyCode) {
+      client.defaults.headers.common[
+        "x-company-code"
+      ] = companyCode;
+    }
   };
 
-  // ======================
-  // INIT AUTH
-  // ======================
-  useEffect(() => {
-  const init = async () => {
-    const storedUser = await AsyncStorage.getItem("user");
-    const token = await AsyncStorage.getItem("accessToken");
-    const companyCode = await AsyncStorage.getItem("companyCode");
+  // ============================================
+  // CLEAR SESSION
+  // ============================================
 
-    if (storedUser && token) {
-      const parsed = JSON.parse(storedUser);
-
-      setUser(parsed);
-
-      client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      client.defaults.headers.common["x-company-code"] = companyCode || "";
-    }
-
-    setLoading(false);
-  };
-
-  init();
-}, []);
-
-
-const fetchMe = async () => {
-  try {
-    const res = await client.get("/auth/me");
-    const fullUser = res.data.user;
-
-    setUser(fullUser);
-
-    await AsyncStorage.setItem("user", JSON.stringify(fullUser));
-
-  } catch (err) {
-    console.log("FETCH ME ERROR:", err);
-  }
-};
-
-  // ======================
-  // LOGIN
-  // ======================
- 
-  const login = async (identifier, password, companyCode, isPlatformLogin) => {
-  try {
-    const res = await authService.login(
-      identifier,
-      password,
-      companyCode,
-      isPlatformLogin
-    );
-
-
-    // ✅ extract from response
-    const { accessToken, refreshToken } = res;
-
-        if (!accessToken) {
-      throw new Error("No token");
-    }
-     // ✅ set axios headers
-    client.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-    client.defaults.headers.common["x-company-code"] = companyCode || "";
-
-     // ✅ FETCH FULL USER
-    const meRes = await client.get("/auth/me");
-
-    const fullUser = meRes.data.user;
-
-    // ✅ STORE
-    await AsyncStorage.multiSet([
-      ["accessToken", accessToken],
-      ["refreshToken", refreshToken],
-      ["user", JSON.stringify(fullUser)],
-      ["companyCode", companyCode || ""],
-    ]);
-
-    // ✅ update state
-    setUser(fullUser);
-    return fullUser;
-
-  } catch (err) {
-    console.log("❌ LOGIN ERROR:", err);
-    throw err;
-  }
-};
-
-  // ======================
-  // LOGOUT
-  // ======================
-  const logout = async () => {
+  const clearSession = async () => {
     try {
       await AsyncStorage.multiRemove([
         "accessToken",
@@ -122,27 +54,250 @@ const fetchMe = async () => {
         "companyCode",
       ]);
 
-      // ✅ FIXED (client, not api)
-      delete client.defaults.headers.common["Authorization"];
-      delete client.defaults.headers.common["x-company-code"];
+      delete client.defaults.headers.common[
+        "Authorization"
+      ];
+
+      delete client.defaults.headers.common[
+        "x-company-code"
+      ];
 
       setUser(null);
+    } catch (err) {
+      console.log(
+        "CLEAR SESSION ERROR:",
+        err
+      );
+    }
+  };
+
+  // ============================================
+  // RESTORE SESSION
+  // ============================================
+
+  useEffect(() => {
+    let mounted = true;
+
+    const bootstrapAuth = async () => {
+      try {
+        setLoading(true);
+
+        const [
+          storedUser,
+          accessToken,
+          companyCode,
+        ] = await AsyncStorage.multiGet([
+          "user",
+          "accessToken",
+          "companyCode",
+        ]).then((entries) =>
+          entries.map((e) => e[1])
+        );
+
+        // No session
+        if (!storedUser || !accessToken) {
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+          }
+
+          return;
+        }
+
+        let parsedUser = null;
+
+        try {
+          parsedUser =
+            JSON.parse(storedUser);
+        } catch (e) {
+          console.log(
+            "INVALID STORED USER"
+          );
+
+          await clearSession();
+
+          if (mounted) {
+            setLoading(false);
+          }
+
+          return;
+        }
+
+        // Apply token immediately
+        applySession({
+          accessToken,
+          companyCode,
+        });
+
+        // Restore local user instantly
+        if (mounted) {
+          setUser(parsedUser);
+        }
+
+        // Verify session silently
+        try {
+          const meRes = await client.get(
+            "/auth/me"
+          );
+
+          const fullUser =
+            meRes?.data?.user ||
+            parsedUser;
+
+          await AsyncStorage.setItem(
+            "user",
+            JSON.stringify(fullUser)
+          );
+
+          if (mounted) {
+            setUser(fullUser);
+          }
+        } catch (verifyErr) {
+          console.log(
+            "AUTH VERIFY FAILED:",
+            verifyErr?.message ||
+              verifyErr
+          );
+
+          await clearSession();
+        }
+      } catch (err) {
+        console.log(
+          "BOOTSTRAP AUTH ERROR:",
+          err
+        );
+
+        await clearSession();
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    bootstrapAuth();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ============================================
+  // LOGIN
+  // ============================================
+
+  const login = async (
+    identifier,
+    password,
+    isPlatformLogin = false
+  ) => {
+    try {
+      const res = await authService.login(
+        identifier,
+        password,
+        isPlatformLogin
+      );
+
+      const {
+        accessToken,
+        refreshToken,
+      } = res || {};
+
+      if (!accessToken) {
+        throw new Error(
+          "Access token missing"
+        );
+      }
+
+      // Apply headers immediately
+      applySession({
+        accessToken,
+        companyCode,
+      });
+
+      // Fetch fresh profile
+      const meRes = await client.get(
+        "/auth/me"
+      );
+
+      const fullUser =
+        meRes?.data?.user;
+
+      if (!fullUser) {
+        throw new Error(
+          "Unable to fetch user profile"
+        );
+      }
+
+      // Save everything together
+      await AsyncStorage.multiSet([
+        [
+          "accessToken",
+          accessToken,
+        ],
+        [
+          "refreshToken",
+          refreshToken || "",
+        ],
+        [
+          "user",
+          JSON.stringify(fullUser),
+        ],
+        [
+          "companyCode",
+          companyCode || "",
+        ],
+      ]);
+
+      setUser(fullUser);
+
+      return fullUser;
+    } catch (err) {
+      console.log(
+        "LOGIN FLOW ERROR:",
+        err?.response?.data || err
+      );
+
+      await clearSession();
+
+      throw err;
+    }
+  };
+
+  // ============================================
+  // LOGOUT
+  // ============================================
+
+  const logout = async () => {
+    try {
+      await clearSession();
 
       router.replace("/login");
     } catch (err) {
-      console.log("Logout error:", err);
+      console.log(
+        "LOGOUT ERROR:",
+        err
+      );
     }
   };
+
+  // ============================================
+  // CONTEXT
+  // ============================================
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        setUser,
+
         loading,
+
         login,
         logout,
-        isAuthenticated: !!user && !loading,
 
+        isAuthenticated:
+          !!user && !loading,
       }}
     >
       {children}
@@ -150,4 +305,5 @@ const fetchMe = async () => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () =>
+  useContext(AuthContext);
