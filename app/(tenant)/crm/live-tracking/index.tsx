@@ -786,4 +786,18 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     marginTop: 4,
   },
+  visitBadge: {
+    backgroundColor: "#6b7280",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  visitBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  completedBadge: {
+    backgroundColor: "#10b981",
+  },
 });
