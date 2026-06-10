@@ -214,18 +214,15 @@ export default function LiveTrackingScreen() {
         }
 
         setMrs((prev) => {
-          const previous = prev.find((m) => String(m.userId) === String(data.userId));
+          const existing = prev.find((m) => String(m.userId) === String(data.userId));
           const filtered = prev.filter((m) => String(m.userId) !== String(data.userId));
-
-          return [
-            {
-              ...previous,
-              ...data,
-              recordedAt: data.recordedAt || new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            ...filtered,
-          ];
+          const updated = {
+            ...existing,
+            ...data,
+            recordedAt: data.recordedAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          return existing ? [updated, ...filtered] : [updated, ...prev];
         });
       });
     };
@@ -246,17 +243,14 @@ export default function LiveTrackingScreen() {
   const selectedMR =
     validMrs.find((mr) => String(mr.userId) === String(selectedId)) || validMrs[0];
 
-  const stats = useMemo(() => {
-    const live = validMrs.filter((mr) => getSignalState(mr).label === "Live").length;
-    const idle = validMrs.length - live;
-
-    return [
-      { label: "MRs tracked", value: validMrs.length, icon: "navigate-circle-outline", color: "#1f5f8b" },
-      { label: "Live now", value: live, icon: "radio-outline", color: "#166534" },
-      { label: "In clinic", value: activeVisits.length, icon: "medkit-outline", color: "#7c3aed" },
-      { label: "Idle / no signal", value: idle, icon: "alert-circle-outline", color: "#b45309" },
-    ];
-  }, [validMrs, activeVisits]);
+  const liveNowCount = mrs.filter((mr) => getSignalState(mr).label === "Live").length;
+  const idleCount = mrs.length - liveNowCount;
+  const stats = useMemo(() => [
+    { label: "MRs tracked", value: mrs.length, icon: "navigate-circle-outline", color: "#1f5f8b" },
+    { label: "Live now", value: liveNowCount, icon: "radio-outline", color: "#166534" },
+    { label: "In clinic", value: activeVisits.length, icon: "medkit-outline", color: "#7c3aed" },
+    { label: "Idle / no signal", value: idleCount, icon: "alert-circle-outline", color: "#b45309" },
+  ], [mrs, activeVisits]);
 
   if (loading) {
     return (
@@ -298,7 +292,7 @@ export default function LiveTrackingScreen() {
           <TouchableOpacity style={styles.todayButton} onPress={() => { setDate(todayString()); setDateInput(todayString()); }}>
             <Text style={styles.todayText}>Today</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.applyButton} onPress={() => { setDate(dateInput); }}>
+          <TouchableOpacity style={styles.applyButton} onPress={() => { setDate(dateInput); loadInitial(); }}>
             <Text style={styles.applyText}>Apply</Text>
           </TouchableOpacity>
 
@@ -484,16 +478,17 @@ export default function LiveTrackingScreen() {
             value={pickerDate}
             mode="date"
             display="spinner"
-            onChange={(event, selectedDate) => {
-              if (event.type === "set" && selectedDate) {
-                const dateStr = selectedDate.toISOString().slice(0, 10);
-                setDate(dateStr);
-                setDateInput(dateStr);
-                setPickerDate(selectedDate);
-              }
-              setShowDatePicker(false);
-            }}
-          />
+          onChange={(event, selectedDate) => {
+            if (event.type === "set" && selectedDate) {
+              const dateStr = selectedDate.toISOString().slice(0, 10);
+              // Convert to local date string to avoid UTC offset issues
+              const localDateStr = new Date(selectedDate).toLocaleDateString('en-CA'); // YYYY-MM-DD
+              setDate(localDateStr);
+              setDateInput(localDateStr);
+              setPickerDate(selectedDate);
+            }
+            setShowDatePicker(false);
+          }}          />
         )}
 
         {/* MR FILTER MODAL */}
