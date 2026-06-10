@@ -85,6 +85,8 @@ export default function LiveTrackingScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [date, setDate] = useState(todayString());
+  // Separate input state to avoid immediate reload on each keystroke
+  const [dateInput, setDateInput] = useState(date);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pickerDate, setPickerDate] = useState(new Date());
@@ -168,7 +170,10 @@ export default function LiveTrackingScreen() {
   };
 
   useEffect(() => {
-    loadInitial();
+    // Only trigger load when date matches YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      loadInitial();
+    }
   }, [date]);
 
   useEffect(() => {
@@ -274,13 +279,16 @@ export default function LiveTrackingScreen() {
 
           <TextInput
             ref={dateInputRef}
-            value={date}
-            onChangeText={setDate}
+            value={dateInput}
+            onChangeText={setDateInput}
             placeholder="YYYY-MM-DD"
             style={styles.dateInput}
           />
-          <TouchableOpacity style={styles.todayButton} onPress={() => setDate(todayString())}>
+          <TouchableOpacity style={styles.todayButton} onPress={() => { setDate(todayString()); setDateInput(todayString()); }}>
             <Text style={styles.todayText}>Today</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.applyButton} onPress={() => { setDate(dateInput); }}>
+            <Text style={styles.applyText}>Apply</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -503,12 +511,12 @@ export default function LiveTrackingScreen() {
                 ]}
               >
                 <Text style={[styles.mrOptionText, !filterMRId && styles.mrOptionTextActive]}>
-                  All MRs ({validMrs.length})
+                  All MRs ({mrs.length})
                 </Text>
               </TouchableOpacity>
 
               <ScrollView style={{ maxHeight: 300 }}>
-                {validMrs.map((mr) => (
+                {mrs.map((mr) => (
                   <TouchableOpacity
                     key={mr.userId}
                     onPress={() => {
@@ -611,9 +619,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#e0f2fe",
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 8,
   },
   todayText: {
     color: "#0369a1",
+    fontWeight: "700",
+  },
+  applyButton: {
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: "#d1fae5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  applyText: {
+    color: "#065f46",
     fontWeight: "700",
   },
   statsScroller: {
