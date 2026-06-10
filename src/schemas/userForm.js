@@ -346,4 +346,20 @@ export const userFormSchema = [
   section: "address",
   showIf: { field: "role", equals: "doctor" },
 },
+{
+  name: "clinicLocation.latitude",
+  label: "Clinic Latitude",
+  type: "text",
+  section: "address",
+  editable: false,
+  showIf: { field: "role", equals: "doctor" },
+},
+{
+  name: "clinicLocation.longitude",
+  label: "Clinic Longitude",
+  type: "text",
+  section: "address",
+  editable: false,
+  showIf: { field: "role", equals: "doctor" },
+},
 ];

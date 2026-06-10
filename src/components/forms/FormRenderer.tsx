@@ -20,9 +20,28 @@ import { Picker } from "@react-native-picker/picker";
 import Tabs from "@/src/components/ui/Tabs";
 import LocationPicker from "@/src/components/maps/LocationPicker";
 
+
 import { useAuth } from "@/src/context/AuthContext";
 import { evaluateRules, applyRules } from "@/src/engine/ruleEngine";
 import { api } from "@/src/api/api";
+
+const deepClone = (value: any): any => {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => deepClone(item));
+  }
+
+  const cloned: any = {};
+
+  Object.keys(value).forEach((key) => {
+    cloned[key] = deepClone(value[key]);
+  });
+
+  return cloned;
+};
 
 export default function FormRenderer({
   schema = [],
@@ -55,7 +74,7 @@ export default function FormRenderer({
       const keys = path.split(".");
       const lastKey = keys.pop();
 
-      const newObj = structuredClone(obj || {});
+      const newObj = deepClone(obj || {});
 
       let current = newObj;
 
@@ -530,66 +549,102 @@ export default function FormRenderer({
     // LOCATION PICKER
     // =====================================================
 
-    if (
-      field.component === "LocationPicker"
-    ) {
-      return (
-        <LocationPicker
-          key={field.name}
-          value={values.geoLocation}
-          onSelect={(data: any) => {
-            if (
-              !data?.latitude ||
-              !data?.longitude
-            ) {
-              return;
-            }
+    if (field.component === "LocationPicker") {
+  const coordinates =
+    values.geoLocation?.coordinates;
 
-            setValues((prev: any) => ({
-              ...prev,
+  return (
+    <View
+      key={field.name}
+      style={{ marginBottom: 16 }}
+    >
+      <LocationPicker
+        value={values.geoLocation}
+        onSelect={(data: any) => {
+          if (
+            !data?.latitude ||
+            !data?.longitude
+          ) {
+            return;
+          }
 
-              geoLocation: {
-                type: "Point",
-                coordinates: [
-                  data.longitude,
-                  data.latitude,
-                ],
-              },
+          setValues((prev: any) => ({
+            ...prev,
 
-              address: {
-                ...(prev.address || {}),
+            geoLocation: {
+              type: "Point",
+              coordinates: [
+                data.longitude,
+                data.latitude,
+              ],
+            },
 
-                line1: (
-                  `${data.street || ""} ${
-                    data.landmark || ""
-                  }`
-                ).trim(),
+            address: {
+              ...(prev.address || {}),
 
-                landmark:
-                  data.landmark || "",
+              line1: `${data.street || ""} ${data.landmark || ""}`.trim(),
 
-                area: data.area || "",
+              landmark:
+                data.landmark || "",
 
-                city: data.city || "",
+              area:
+                data.area || "",
 
-                state: data.state || "",
+              city:
+                data.city || "",
 
-                country:
-                  data.country || "",
+              state:
+                data.state || "",
 
-                pincode:
-                  data.postalCode || "",
-              },
-            }));
+              country:
+                data.country || "",
+
+              pincode:
+                data.postalCode || "",
+            },
+          }));
+        }}
+      />
+
+      {coordinates?.length === 2 && (
+        <View
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 10,
+            backgroundColor: "#f8fafc",
+            borderWidth: 1,
+            borderColor: "#cbd5e1",
           }}
-        />
-      );
-    }
+        >
+          <Text
+            style={{
+              fontWeight: "700",
+              marginBottom: 6,
+            }}
+          >
+            Saved Location
+          </Text>
 
-    return null;
-  };
+          <Text>
+            Latitude: {coordinates[1]}
+          </Text>
 
-  // =====================================================
+          <Text>
+            Longitude: {coordinates[0]}
+          </Text>
+
+          <Text>
+            Address: {values.address?.line1 || "N/A"}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+return null;
+}; 
   // UI
   // =====================================================
 

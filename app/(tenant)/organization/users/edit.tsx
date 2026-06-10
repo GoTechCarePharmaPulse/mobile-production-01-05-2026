@@ -100,6 +100,8 @@ export default function EditUser() {
 
       let safeGeoLocation = null;
 
+      let safeClinicLocation = null;
+
       if (
         userData.geoLocation &&
         Array.isArray(
@@ -119,7 +121,29 @@ export default function EditUser() {
             type: "Point",
             coordinates: [lng, lat],
           };
+          safeClinicLocation = {
+            longitude: lng,
+            latitude: lat,
+          };
         }
+      } else if (
+        userData.clinicLocation &&
+        typeof userData.clinicLocation.latitude === "number" &&
+        typeof userData.clinicLocation.longitude === "number"
+      ) {
+        safeClinicLocation = {
+          longitude:
+            userData.clinicLocation.longitude,
+          latitude:
+            userData.clinicLocation.latitude,
+        };
+        safeGeoLocation = {
+          type: "Point",
+          coordinates: [
+            userData.clinicLocation.longitude,
+            userData.clinicLocation.latitude,
+          ],
+        };
       }
 
       // ===============================
@@ -228,6 +252,7 @@ export default function EditUser() {
             "",
         },
 
+        clinicLocation: safeClinicLocation,
         geoLocation: safeGeoLocation,
 
         password: "",
@@ -316,6 +341,12 @@ export default function EditUser() {
     ) {
       payload.geoLocation =
         values.geoLocation;
+      payload.clinicLocation = {
+        longitude:
+          values.geoLocation.coordinates[0],
+        latitude:
+          values.geoLocation.coordinates[1],
+      };
     }
 
     // CLEAN EMPTY FIELDS

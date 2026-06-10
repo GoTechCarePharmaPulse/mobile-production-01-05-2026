@@ -166,10 +166,11 @@ export default function DrawerContent() {
           title: "Visits",
           path: "/(tenant)/crm/visits",
           icon: "calendar-outline",
+	  
         },
 
         {
-          title: "Live Tracking",
+          title: "MR Tracker",
           path: "/(tenant)/crm/live-tracking",
           icon: "location-outline",
         },

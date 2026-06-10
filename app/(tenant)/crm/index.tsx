@@ -27,7 +27,7 @@ export default function CRM() {
       path: "/crm/visits",
     },
     {
-      title: "Live Tracking",
+      title: "MR Tracker",
       icon: "location",
       path: "/crm/live-tracking",
     },

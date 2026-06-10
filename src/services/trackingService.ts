@@ -69,4 +69,23 @@ export const trackingService = {
 
     return res.data;
   },
+
+  /* =========================
+     ACTIVE CLINIC VISITS
+  ========================= */
+
+  async getLiveVisitDashboard(date?: string) {
+
+    const query = new URLSearchParams();
+
+    if (date) {
+      query.append("date", date);
+    }
+
+    const res = await api.get(
+      `/visits/dashboard/live${query.toString() ? `?${query.toString()}` : ""}`
+    );
+
+    return res.data;
+  },
 };

@@ -1,9 +1,12 @@
-import { useAuth } from "@/src/context/AuthContext";
-import { hasRole } from "@/src/utils/rbac";
-import { View, Text } from "react-native";
+import type { ReactNode } from "react";
 
-const RoleGuard = ({ children }) => {
-  return children; // ✅ bypass role check
+type RoleGuardProps = {
+  children: ReactNode;
+  allowedRoles?: string[];
+};
+
+const RoleGuard = ({ children }: RoleGuardProps) => {
+  return <>{children}</>;
 };
 
 export default RoleGuard;

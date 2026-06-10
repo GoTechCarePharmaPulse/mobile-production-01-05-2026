@@ -236,6 +236,12 @@ const getActions = (item: any) => {
 
   return [
     {
+      label: "View",
+      onPress: () => router.push(`/organization/users/${item._id}`),
+      color: "#2563eb",
+      show: !!item._id,
+    },
+    {
       label: "Edit",
       onPress: () => handleEdit(item),
       color: "#2563eb",

@@ -58,7 +58,7 @@ export default function CompanyLayout() {
         )}
 
 	{hasPermission(user, PERMISSIONS.crm?.view) && (
- 	 <Drawer.Screen name="crm/live-tracking/index" options={{ title: "Live Tracking" }} />
+ 	 <Drawer.Screen name="crm/live-tracking/index" options={{ title: "MR Tracker" }} />
 	)}
 
       </Drawer>

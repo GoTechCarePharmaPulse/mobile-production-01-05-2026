@@ -107,6 +107,7 @@ client.interceptors.response.use(
           await AsyncStorage.getItem(
             "refreshToken"
           );
+	console.log("REFRESH TOKEN:", refreshToken);
 
         if (!refreshToken) {
           throw new Error("No refresh token");
@@ -143,6 +144,11 @@ client.interceptors.response.use(
         processQueue(refreshError, null);
 
         console.log("❌ REFRESH FAILED");
+	console.log(
+    "REFRESH ERROR:",
+    refreshError?.response?.data ||
+    refreshError
+  );
 
         await AsyncStorage.multiRemove([
           "accessToken",

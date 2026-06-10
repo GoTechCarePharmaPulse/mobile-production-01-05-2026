@@ -193,18 +193,15 @@ export const AuthProvider = ({ children }) => {
     isPlatformLogin = false
   ) => {
     try {
-      const storedCompanyCode =
-  await AsyncStorage.getItem("companyCode");
-
-console.log(
-  "USING COMPANY CODE:",
-  storedCompanyCode
+      console.log(
+  "LOGIN COMPANY CODE:",
+  companyCode
 );
 
 const res = await authService.login(
   identifier,
   password,
-  storedCompanyCode,
+  companyCode,
   isPlatformLogin
 );
 
@@ -218,6 +215,12 @@ const res = await authService.login(
           "Access token missing"
         );
       }
+      if (companyCode) {
+  await AsyncStorage.setItem(
+    "companyCode",
+    companyCode
+  );
+}
 
       // Apply headers immediately
       applySession({
