@@ -14,6 +14,7 @@ import { useKeepAwake } from "expo-keep-awake";
 import { useAuthGuard } from "@/src/hooks/useAuthGuard";
 
 import { initSocket } from "@/src/socket";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 /* ===============================

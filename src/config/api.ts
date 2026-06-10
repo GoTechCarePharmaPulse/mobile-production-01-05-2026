@@ -1,7 +1,7 @@
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  "https://pharmapulse-backend-production.up.railway.app/api";
+  "https://pharmapulse-backend-rl2h.onrender.com/api";
 
 export const SOCKET_URL =
   process.env.EXPO_PUBLIC_API_URL?.replace("/api", "") ||
-  "https://pharmapulse-backend-production.up.railway.app";
+  "https://pharmapulse-backend-rl2h.onrender.com/";

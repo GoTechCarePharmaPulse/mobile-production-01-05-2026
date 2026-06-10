@@ -1,5 +1,6 @@
 import client from "@/src/api/client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getTenant } from "@/src/utils/tenantStorage";
 
 export const authService = {
   // ======================
@@ -18,11 +19,15 @@ export const authService = {
     let companyCode = companyCodeFromUI;
 
     if (!companyCode && !isPlatformLogin) {
-      companyCode =
-        await AsyncStorage.getItem(
-          "companyCode"
-        );
-    }
+  const tenant = await getTenant();
+
+  companyCode =
+    tenant?.companyCode || null;
+  console.log(
+  "TENANT COMPANY CODE:",
+  companyCode
+);
+}
 
     // =========================================
     // DETERMINE LOGIN TYPE
@@ -38,6 +43,11 @@ export const authService = {
     // =========================================
     // REQUEST BODY
     // =========================================
+
+    console.log(
+  "STORED COMPANY CODE:",
+  await AsyncStorage.getItem("companyCode")
+);
 
     const payload = {
       identifier,

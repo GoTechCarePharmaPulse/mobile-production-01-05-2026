@@ -189,14 +189,24 @@ export const AuthProvider = ({ children }) => {
   const login = async (
     identifier,
     password,
+     companyCode = null,
     isPlatformLogin = false
   ) => {
     try {
-      const res = await authService.login(
-        identifier,
-        password,
-        isPlatformLogin
-      );
+      const storedCompanyCode =
+  await AsyncStorage.getItem("companyCode");
+
+console.log(
+  "USING COMPANY CODE:",
+  storedCompanyCode
+);
+
+const res = await authService.login(
+  identifier,
+  password,
+  storedCompanyCode,
+  isPlatformLogin
+);
 
       const {
         accessToken,
