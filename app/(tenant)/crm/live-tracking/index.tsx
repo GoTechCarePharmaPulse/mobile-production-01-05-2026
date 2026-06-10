@@ -317,7 +317,7 @@ export default function LiveTrackingScreen() {
             longitudeDelta: 2,
           }}
         >
-          {validMrs.map((mr, index) => {
+          {(filterMRId ? validMrs.filter(mr => String(mr.userId) === String(filterMRId)) : validMrs).map((mr, index) => {
             const signal = getSignalState(mr);
 
             return (
