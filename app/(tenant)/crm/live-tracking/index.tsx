@@ -403,6 +403,32 @@ export default function LiveTrackingScreen() {
                     </View>
                   </View>
 
+                        {/* Visit Status Badge */}
+      {(() => {
+        const visit = activeVisits.find(v => String(v.mrId) === String(item.userId));
+        if (!visit) return null;
+        let label = '';
+        switch (visit.status) {
+          case 'STARTED':
+            label = 'In Clinic';
+            break;
+          case 'VISITED':
+            label = 'Visited';
+            break;
+          case 'COMPLETED':
+            label = 'Completed';
+            break;
+          default:
+            label = visit.status;
+        }
+        return (
+          <View style={[styles.visitBadge, label === 'Completed' && styles.completedBadge]}>
+            <Text style={styles.visitBadgeText}>{label}</Text>
+          </View>
+        );
+      })()}
+
+
                   <Text style={styles.metaText}>
                     Last ping: {formatTime(item.recordedAt || item.updatedAt)}
                     {item.accuracy ? `  Accuracy: ${Math.round(Number(item.accuracy))}m` : ""}
