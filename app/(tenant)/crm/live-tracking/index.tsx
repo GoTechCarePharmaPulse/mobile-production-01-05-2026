@@ -81,6 +81,7 @@ export default function LiveTrackingScreen() {
   const dateInputRef = useRef<TextInput | null>(null);
 
   const [mrs, setMrs] = useState<MRLocation[]>([]);
+  const [mrList, setMrList] = useState<any[]>([]);
   const [activeVisits, setActiveVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -135,8 +136,17 @@ export default function LiveTrackingScreen() {
 
       console.log("📍 Processed locations count:", locations.length);
 
+      // Handle MR directory response which may be wrapped
+      let mrArray: any[] = [];
+      if (Array.isArray(mrDirectory)) {
+        mrArray = mrDirectory;
+      } else if (Array.isArray(mrDirectory?.data)) {
+        mrArray = mrDirectory.data;
+      }
+      console.log("📋 Processed MR directory count:", mrArray.length);
+
       const directory = new Map(
-        (Array.isArray(mrDirectory) ? mrDirectory : []).map((mr: any) => [
+        mrArray.map((mr: any) => [
           String(mr._id || mr.id),
           mr,
         ])
@@ -160,6 +170,7 @@ export default function LiveTrackingScreen() {
       console.log("🏥 Active visits:", Array.isArray(visitsData?.visits) ? visitsData.visits : []);
 
       setMrs(enriched);
+      setMrList(mrArray);
       setActiveVisits(Array.isArray(visitsData?.visits) ? visitsData.visits : []);
     } catch (err: any) {
       console.log("❌ LIVE TRACK CRITICAL ERROR:", err?.response?.data || err?.message || err);
@@ -477,6 +488,7 @@ export default function LiveTrackingScreen() {
               if (event.type === "set" && selectedDate) {
                 const dateStr = selectedDate.toISOString().slice(0, 10);
                 setDate(dateStr);
+                setDateInput(dateStr);
                 setPickerDate(selectedDate);
               }
               setShowDatePicker(false);
@@ -511,29 +523,29 @@ export default function LiveTrackingScreen() {
                 ]}
               >
                 <Text style={[styles.mrOptionText, !filterMRId && styles.mrOptionTextActive]}>
-                  All MRs ({mrs.length})
+                  All MRs ({mrList.length})
                 </Text>
               </TouchableOpacity>
 
               <ScrollView style={{ maxHeight: 300 }}>
-                {mrs.map((mr) => (
+                {mrList.map((mr) => (
                   <TouchableOpacity
-                    key={mr.userId}
+                    key={mr._id || mr.id}
                     onPress={() => {
-                      setFilterMRId(String(mr.userId));
+                      setFilterMRId(String(mr._id || mr.id));
                       setShowMRFilter(false);
                     }}
                     style={[
                       styles.mrOption,
-                      String(filterMRId) === String(mr.userId) && styles.mrOptionActive,
+                      String(filterMRId) === String(mr._id || mr.id) && styles.mrOptionActive,
                     ]}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.mrOptionText, String(filterMRId) === String(mr.userId) && styles.mrOptionTextActive]}>
-                        {getDisplayName(mr)}
+                      <Text style={[styles.mrOptionText, String(filterMRId) === String(mr._id || mr.id) && styles.mrOptionTextActive]}>
+                        {mr.name || `${mr.firstName || ""} ${mr.lastName || ""}`.trim()}
                       </Text>
                       <Text style={styles.mrOptionMeta}>
-                        {mr.mobile || "No contact"} • {getSignalState(mr).label}
+                        {mr.mobile || "No contact"}
                       </Text>
                     </View>
                   </TouchableOpacity>
