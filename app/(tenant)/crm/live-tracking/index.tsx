@@ -292,9 +292,14 @@ export default function LiveTrackingScreen() {
           <TouchableOpacity style={styles.todayButton} onPress={() => { setDate(todayString()); setDateInput(todayString()); }}>
             <Text style={styles.todayText}>Today</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.applyButton} onPress={() => { setDate(dateInput); loadInitial(); }}>
-            <Text style={styles.applyText}>Apply</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.applyButton} onPress={() => {
+              // Update the main date state with the user-entered value (local YYYY‑MM‑DD)
+              setDate(dateInput);
+              // Force a fresh fetch (show loading indicator)
+              loadInitial(true);
+            }}>
+              <Text style={styles.applyText}>Apply</Text>
+            </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.todayButton, { backgroundColor: filterMRId ? "#dbeafe" : "#e0f2fe" }]} 
@@ -473,23 +478,21 @@ export default function LiveTrackingScreen() {
         </View>
 
         {/* DATE PICKER MODAL */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={pickerDate}
-            mode="date"
-            display="spinner"
-          onChange={(event, selectedDate) => {
-            if (event.type === "set" && selectedDate) {
-              const dateStr = selectedDate.toISOString().slice(0, 10);
-              // Convert to local date string to avoid UTC offset issues
-              const localDateStr = new Date(selectedDate).toLocaleDateString('en-CA'); // YYYY-MM-DD
-              setDate(localDateStr);
-              setDateInput(localDateStr);
-              setPickerDate(selectedDate);
-            }
-            setShowDatePicker(false);
-          }}          />
-        )}
+        {showDatePicker &&            <DateTimePicker
+              value={pickerDate}
+              mode="date"
+              display="spinner"
+              onChange={(event, selectedDate) => {
+                if (event.type === "set" && selectedDate) {
+                  // Convert to local YYYY‑MM‑DD format to avoid UTC shift
+                  const localDate = selectedDate.toLocaleDateString('en-CA'); // e.g., 2026-06-11
+                  setDate(localDate);
+                  setDateInput(localDate);
+                  setPickerDate(selectedDate);
+                }
+                setShowDatePicker(false);
+              }}
+            />        }
 
         {/* MR FILTER MODAL */}
         <Modal
