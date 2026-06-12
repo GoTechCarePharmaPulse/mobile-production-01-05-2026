@@ -399,7 +399,7 @@ export default function LiveTrackingScreen() {
           )}
 
           <FlatList
-            data={filterMRId ? validMrs.filter(mr => String(mr.userId) === String(filterMRId)) : validMrs}
+            data={filterMRId ? validMrs.filter(mr => String(mr.userId) === String(filterMRId)) : (validMrs.length ? validMrs : mrList)}
             keyExtractor={(item, index) => item.userId || index.toString()}
             renderItem={({ item }) => {
               const signal = getSignalState(item);
