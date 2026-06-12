@@ -48,6 +48,10 @@ export default function CompanyLayout() {
 
   return (
     <View style={{ flex: 1 }}>
+      <HeaderBar
+        logoSource={{ uri: 'file:///C:/Users/Shrawan%20Kumar/.gemini/antigravity-ide/brain/ba2cfdf9-d09f-4aa4-8689-0f3e6342ef13/logo_placeholder_1781296326404.png' }}
+        onAvatarPress={() => router.push('/profile')}
+      />
       <Drawer
         drawerContent={(props) => <DrawerContent {...props} />}
         screenOptions={{

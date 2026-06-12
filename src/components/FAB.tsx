@@ -1,38 +1,65 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform, AccessibilityInfo } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, TouchableOpacity, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-// Reusable Floating Action Button container with two actions
+// Reusable Floating Action Button container with expandable mini-menu
 export default function FAB() {
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const animation = useRef(new Animated.Value(0)).current;
+
+  const toggleMenu = () => {
+    const toValue = isOpen ? 0 : 1;
+    Animated.spring(animation, {
+      toValue,
+      useNativeDriver: true,
+      friction: 5,
+    }).start();
+    setIsOpen(!isOpen);
+  };
 
   const handleAddMR = () => {
-    // Navigate to the Add MR screen (adjust route as needed)
+    toggleMenu();
     router.push('/crm/add-mr');
   };
 
   const handleStartTracking = () => {
-    // Already on the Live Tracking screen; you may implement additional logic if needed
-    // For demo, we simply refresh data via a route reload
+    toggleMenu();
     router.replace(router.asPath);
   };
 
+  const rotation = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '45deg'],
+  });
+
+  const secondaryTranslateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -70],
+  });
+
+  const opacity = animation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 0, 1],
+  });
+
   return (
     <View style={styles.container} accessibilityLabel="Floating action buttons" accessible={true}>
-      <TouchableOpacity
-        style={[styles.fab, styles.secondary]}
-        onPress={handleAddMR}
-        accessibilityLabel="Add New MR"
-      >
-        <Ionicons name="person-add-outline" size={24} color="#fff" />
-      </TouchableOpacity>
+      <Animated.View style={[styles.fab, styles.secondary, { transform: [{ translateY: secondaryTranslateY }], opacity }]}>
+        <TouchableOpacity onPress={handleAddMR} accessibilityLabel="Add New MR">
+          <Ionicons name="person-add-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </Animated.View>
+
       <TouchableOpacity
         style={[styles.fab, styles.primary]}
-        onPress={handleStartTracking}
-        accessibilityLabel="Start Live Tracking"
+        onPress={toggleMenu}
+        accessibilityLabel="Menu"
       >
-        <Ionicons name="play-outline" size={24} color="#fff" />
+        <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+          <Ionicons name="add" size={32} color="#fff" />
+        </Animated.View>
       </TouchableOpacity>
     </View>
   );
@@ -44,8 +71,6 @@ const styles = StyleSheet.create({
     right: 16,
     bottom: 16,
     flexDirection: 'column',
-    gap: 12,
-    // Ensure touch targets are at least 48dp
     alignItems: 'center',
   },
   fab: {
@@ -59,11 +84,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
+    position: 'absolute',
   },
   primary: {
-    backgroundColor: '#1f5f8b', // brand primary
+    backgroundColor: '#1f5f8b',
+    zIndex: 10,
   },
   secondary: {
-    backgroundColor: '#6b7280', // neutral gray for secondary action
+    backgroundColor: '#6b7280',
+    zIndex: 5,
   },
 });
