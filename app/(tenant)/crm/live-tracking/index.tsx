@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import MapView, { Marker } from "react-native-maps";
+import SuperCluster from "react-native-maps-super-cluster";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -326,32 +327,47 @@ export default function LiveTrackingScreen() {
           ))}
         </ScrollView>
 
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: initialLatitude,
-            longitude: initialLongitude,
-            latitudeDelta: 2,
-            longitudeDelta: 2,
-          }}
+        <SuperCluster
+  style={styles.map}
+  radius={40}
+  maxZoom={20}
+  minZoom={1}
+  extent={512}
+  nodeSize={64}
+  points={(filterMRId ? validMrs.filter(mr => String(mr.userId) === String(filterMRId)) : validMrs).map(mr => ({
+    location: {
+      latitude: getLatitude(mr) || 0,
+      longitude: getLongitude(mr) || 0,
+    },
+    mr,
+  }))}
+  renderMarker={(cluster, onPress) => {
+    if (cluster.cluster) {
+      return (
+        <Marker
+          coordinate={cluster.coordinate}
+          key={`cluster-${cluster.clusterId}`}
+          onPress={onPress}
         >
-          {(filterMRId ? validMrs.filter(mr => String(mr.userId) === String(filterMRId)) : validMrs).map((mr, index) => {
-            const signal = getSignalState(mr);
-
-            return (
-              <Marker
-                key={mr.userId || index}
-                coordinate={{
-                  latitude: getLatitude(mr) || 20.5937,
-                  longitude: getLongitude(mr) || 78.9629,
-                }}
-                title={getDisplayName(mr)}
-                description={`${signal.label} - ${formatTime(mr.recordedAt || mr.updatedAt)}`}
-                pinColor={signal.label === "Live" ? "#16a34a" : "#f59e0b"}
-              />
-            );
-          })}
-        </MapView>
+          <View style={styles.clusterMarker}>
+            <Text style={styles.clusterText}>{cluster.pointCount}</Text>
+          </View>
+        </Marker>
+      );
+    }
+    const { mr } = cluster;
+    const signal = getSignalState(mr);
+    return (
+      <Marker
+        key={mr.userId || mr._id}
+        coordinate={cluster.location}
+        title={getDisplayName(mr)}
+        description={`${signal.label} - ${formatTime(mr.recordedAt || mr.updatedAt)}`}
+        pinColor={signal.label === "Live" ? "#16a34a" : "#f59e0b"}
+      />
+    );
+  }}
+/>
 
         <View style={styles.bottomSheet}>
           <Text style={styles.sectionTitle}>Field Activity</Text>
@@ -477,7 +493,18 @@ export default function LiveTrackingScreen() {
           />
         </View>
 
-        {/* DATE PICKER MODAL */}
+                  {/* Legend overlay */}
+          <View style={styles.mapLegend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: "#16a34a" }]} />
+              <Text style={styles.legendLabel}>Live</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: "#f59e0b" }]} />
+              <Text style={styles.legendLabel}>Idle / No signal</Text>
+            </View>
+          </View>
+
         {showDatePicker &&            <DateTimePicker
               value={pickerDate}
               mode="date"
@@ -676,8 +703,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  map: {
-    flex: 1,
+  clusterMarker: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#1f5f8b',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clusterText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  mapLegend: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 8,
+    padding: 6,
+    flexDirection: 'row',
+    gap: 8,
+    elevation: 2,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  legendColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+  },
+  legendLabel: {
+    fontSize: 11,
+    color: '#0f172a',
   },
   bottomSheet: {
     position: "absolute",
