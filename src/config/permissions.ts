@@ -35,6 +35,9 @@ export const PERMISSIONS = {
 export const hasPermission = (user: any, permission: string) => {
   if (!user) return false;
 
+  // admin and manager have full access
+  if (user.role === "admin" || user.role === "manager") return true;
+
   // super admin / full access
   if (user.permissions?.includes("ALL")) return true;
 
