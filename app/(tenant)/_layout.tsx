@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { hasPermission, PERMISSIONS } from "@/src/config/permissions";
 import { useAuth } from "@/src/context/AuthContext";
-import DrawerContent from "../../src/components/navigation/DrawerContent";
+import DrawerContent from "@/src/components/navigation/DrawerContent";
 import { useRouter } from "expo-router";
 
 export default function CompanyLayout() {

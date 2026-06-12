@@ -3,9 +3,9 @@ import { DrawerContentComponentProps } from "@react-navigation/drawer";
 import { View, Text, TouchableOpacity, StyleSheet, ImageBackground } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { hasPermission, PERMISSIONS } from "../../config/permissions";
-import { MENU_ITEMS } from "../../constants/menuConfig";
-import { colors, fonts } from "../../theme/theme";
+import { hasPermission, PERMISSIONS } from "@/src/config/permissions";
+import { MENU_ITEMS } from "@/src/constants/menuConfig";
+import { colors, fonts } from "@/src/theme/theme";
 
 export default function DrawerContent({ navigation }: DrawerContentComponentProps) {
   const router = useRouter();
