@@ -21,30 +21,6 @@ export default function CompanyLayout() {
         <Text style={{ marginTop: 10 }}>Syncing Session...</Text>
       </View>
     );
-import { Drawer } from "expo-router/drawer";
-import { DrawerToggleButton } from "@react-navigation/drawer";
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Pressable } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import { hasPermission, PERMISSIONS } from "@/src/config/permissions";
-import { useAuth } from "@/src/context/AuthContext";
-import DrawerContent from "@/src/components/navigation/DrawerContent";
-import { useRouter } from "expo-router";
-
-export default function CompanyLayout() {
-  const { user, logout, loading } = useAuth();
-  const [open, setOpen] = useState(false);
-  const router = useRouter();
-
-  // ✅ 1. Wait for Auth to fully resolve
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-        <ActivityIndicator size="large" color="#1e40af" />
-        <Text style={{ marginTop: 10 }}>Syncing Session...</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={{ flex: 1 }}>
