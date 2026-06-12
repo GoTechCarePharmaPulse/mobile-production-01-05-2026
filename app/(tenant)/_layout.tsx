@@ -21,11 +21,29 @@ export default function CompanyLayout() {
         <Text style={{ marginTop: 10 }}>Syncing Session...</Text>
       </View>
     );
-  }
+import { Drawer } from "expo-router/drawer";
+import { DrawerToggleButton } from "@react-navigation/drawer";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
+import { hasPermission, PERMISSIONS } from "@/src/config/permissions";
+import { useAuth } from "@/src/context/AuthContext";
+import DrawerContent from "@/src/components/navigation/DrawerContent";
+import { useRouter } from "expo-router";
 
-  // ✅ 2. Handle unauthorized access gracefully
-  if (!user) {
-    return null; // AuthGuard will handle the redirect to /login
+export default function CompanyLayout() {
+  const { user, logout, loading } = useAuth();
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  // ✅ 1. Wait for Auth to fully resolve
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#1e40af" />
+        <Text style={{ marginTop: 10 }}>Syncing Session...</Text>
+      </View>
+    );
   }
 
   return (
@@ -33,13 +51,13 @@ export default function CompanyLayout() {
       <Drawer
         drawerContent={(props) => <DrawerContent {...props} />}
         screenOptions={{
-          headerShown: true,
+          headerTitle: "",
           headerLeft: () => <DrawerToggleButton />,
           headerRight: () => (
             <TouchableOpacity onPress={() => setOpen(!open)} style={{ marginRight: 15 }}>
               <Ionicons 
-                name={open ? "close-circle" : "person-circle"} 
-                size={32} 
+                name="person-circle-outline" 
+                size={30} 
                 color="#1e40af" 
               />
             </TouchableOpacity>
