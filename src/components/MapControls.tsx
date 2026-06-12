@@ -14,6 +14,13 @@ export default function MapControls({ onZoomIn, onZoomOut, onMyLocation, onToggl
       <TouchableOpacity style={styles.button} onPress={onMyLocation} accessibilityLabel="My location">
         <Ionicons name="locate-outline" size={24} color="#1f5f8b" />
       </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.button, mapType === 'satellite' && styles.activeButton]} 
+        onPress={onToggleSatellite} 
+        accessibilityLabel="Toggle satellite view"
+      >
+        <Ionicons name="layers-outline" size={24} color={mapType === 'satellite' ? "#fff" : "#1f5f8b"} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -38,5 +45,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 1,
+  },
+  activeButton: {
+    backgroundColor: '#1f5f8b',
   },
 });

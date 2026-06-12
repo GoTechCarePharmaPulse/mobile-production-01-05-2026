@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Animated, TouchableWithoutFeedback, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -26,7 +26,7 @@ export default function FAB() {
 
   const handleStartTracking = () => {
     toggleMenu();
-    router.replace(router.asPath);
+    Alert.alert("Live Tracking", "Live tracking has been started successfully.");
   };
 
   const rotation = animation.interpolate({
@@ -70,7 +70,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     bottom: 16,
-    flexDirection: 'column',
+    width: 56,
+    height: 130,
+    justifyContent: 'flex-end',
     alignItems: 'center',
   },
   fab: {

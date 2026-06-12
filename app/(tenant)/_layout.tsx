@@ -7,6 +7,8 @@ import { hasPermission, PERMISSIONS } from "@/src/config/permissions";
 import { useAuth } from "@/src/context/AuthContext";
 import DrawerContent from "@/src/components/navigation/DrawerContent";
 import { useRouter } from "expo-router";
+import HeaderBar from "@/src/components/HeaderBar";
+
 
 export default function CompanyLayout() {
   const { user, logout, loading } = useAuth();
@@ -21,11 +23,11 @@ export default function CompanyLayout() {
         <Text style={{ marginTop: 10 }}>Syncing Session...</Text>
       </View>
     );
-
+  }
   return (
     <View style={{ flex: 1 }}>
       <HeaderBar
-        logoSource={{ uri: 'file:///C:/Users/Shrawan%20Kumar/.gemini/antigravity-ide/brain/ba2cfdf9-d09f-4aa4-8689-0f3e6342ef13/logo_placeholder_1781296326404.png' }}
+        logoSource={require("@/src/assets/branding/logo_placeholder.png")}
         onAvatarPress={() => router.push('/profile')}
       />
       <Drawer

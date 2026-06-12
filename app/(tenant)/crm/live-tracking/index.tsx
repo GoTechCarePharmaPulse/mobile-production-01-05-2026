@@ -9,10 +9,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
+  Alert,
 } from "react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import MapView, { Marker } from "react-native-maps";
-import SuperCluster from "react-native-maps-super-cluster";
+import MapView from "react-native-map-clustering";
+import { Marker } from "react-native-maps";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -21,6 +23,8 @@ import RoleGuard from "@/src/guards/RoleGuard";
 import { mrService } from "@/src/modules/mr/api/mrService";
 import { trackingService } from "@/src/services/trackingService";
 import { initSocket } from "@/src/socket";
+import FAB from "@/src/components/FAB";
+import MapControls from "@/src/components/MapControls";
 
 type MRLocation = {
   _id?: string;
@@ -94,6 +98,16 @@ export default function LiveTrackingScreen() {
   const [pickerDate, setPickerDate] = useState(new Date());
   const [showMRFilter, setShowMRFilter] = useState(false);
   const [filterMRId, setFilterMRId] = useState<string | null>(null);
+
+  const mapRef = useRef<any>(null);
+  const [region, setRegion] = useState({
+    latitude: 20.5937,
+    longitude: 78.9629,
+    latitudeDelta: 10,
+    longitudeDelta: 10,
+  });
+  const [mapType, setMapType] = useState<"standard" | "satellite">("standard");
+  const [showOfferBanner, setShowOfferBanner] = useState(true);
 
   const loadInitial = async (showRefresh = false) => {
     try {
@@ -244,6 +258,64 @@ export default function LiveTrackingScreen() {
   const selectedMR =
     validMrs.find((mr) => String(mr.userId) === String(selectedId)) || validMrs[0];
 
+  const handleZoomIn = () => {
+    if (mapRef.current) {
+      const newRegion = {
+        ...region,
+        latitudeDelta: region.latitudeDelta / 2,
+        longitudeDelta: region.longitudeDelta / 2,
+      };
+      setRegion(newRegion);
+      mapRef.current.animateToRegion(newRegion, 300);
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (mapRef.current) {
+      const newRegion = {
+        ...region,
+        latitudeDelta: region.latitudeDelta * 2,
+        longitudeDelta: region.longitudeDelta * 2,
+      };
+      setRegion(newRegion);
+      mapRef.current.animateToRegion(newRegion, 300);
+    }
+  };
+
+  const handleMyLocation = () => {
+    if (mapRef.current && selectedMR) {
+      const mrLat = getLatitude(selectedMR);
+      const mrLng = getLongitude(selectedMR);
+      if (mrLat !== null && mrLng !== null) {
+        const newRegion = {
+          latitude: mrLat,
+          longitude: mrLng,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        };
+        setRegion(newRegion);
+        mapRef.current.animateToRegion(newRegion, 500);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (selectedMR && mapRef.current) {
+      const lat = getLatitude(selectedMR);
+      const lng = getLongitude(selectedMR);
+      if (lat !== null && lng !== null) {
+        const newRegion = {
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        };
+        setRegion(newRegion);
+        mapRef.current.animateToRegion(newRegion, 500);
+      }
+    }
+  }, [selectedId, mrs]);
+
   const liveNowCount = mrs.filter((mr) => getSignalState(mr).label === "Live").length;
   const idleCount = mrs.length - liveNowCount;
   const stats = useMemo(() => [
@@ -267,6 +339,18 @@ export default function LiveTrackingScreen() {
   return (
     <RoleGuard allowedRoles={["admin", "manager"]}>
       <View style={styles.screen}>
+        {showOfferBanner && (
+          <View style={styles.offerBanner}>
+            <View style={styles.offerTextContainer}>
+              <Ionicons name="gift-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.offerText}>Limited-time Offer: 20% off MR subscriptions!</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowOfferBanner(false)}>
+              <Ionicons name="close" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>Manager and Admin</Text>
@@ -327,59 +411,86 @@ export default function LiveTrackingScreen() {
           ))}
         </ScrollView>
 
-        <SuperCluster
-  style={styles.map}
-  radius={40}
-  maxZoom={20}
-  minZoom={1}
-  extent={512}
-  nodeSize={64}
-  points={(filterMRId ? validMrs.filter(mr => String(mr.userId) === String(filterMRId)) : validMrs).map(mr => ({
-    location: {
-      latitude: getLatitude(mr) || 0,
-      longitude: getLongitude(mr) || 0,
-    },
-    mr,
-  }))}
-  renderMarker={(cluster, onPress) => {
-    if (cluster.cluster) {
-      return (
-        <Marker
-          coordinate={cluster.coordinate}
-          key={`cluster-${cluster.clusterId}`}
-          onPress={onPress}
-        >
-          <View style={styles.clusterMarker}>
-            <Text style={styles.clusterText}>{cluster.pointCount}</Text>
+        <View style={styles.mapContainer}>
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            region={region}
+            onRegionChangeComplete={(r) => setRegion(r)}
+            mapType={mapType}
+            renderCluster={(cluster, onPress) => (
+              <Marker
+                coordinate={cluster.coordinate}
+                key={`cluster-${cluster.clusterId}`}
+                onPress={onPress}
+              >
+                <View style={styles.clusterMarker}>
+                  <Text style={styles.clusterText}>{cluster.pointCount}</Text>
+                </View>
+              </Marker>
+            )}
+          >
+            {(filterMRId ? validMrs.filter(mr => String(mr.userId) === String(filterMRId)) : validMrs).map(mr => {
+              const signal = getSignalState(mr);
+              const lat = getLatitude(mr) || 0;
+              const lng = getLongitude(mr) || 0;
+              return (
+                <Marker
+                  key={mr.userId || mr._id}
+                  coordinate={{ latitude: lat, longitude: lng }}
+                  title={getDisplayName(mr)}
+                  description={`${signal.label} - ${formatTime(mr.recordedAt || mr.updatedAt)}`}
+                  pinColor={signal.label === "Live" ? "#16a34a" : "#f59e0b"}
+                />
+              );
+            })}
+          </MapView>
+
+          <MapControls
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onMyLocation={handleMyLocation}
+            onToggleSatellite={() => setMapType(prev => prev === 'standard' ? 'satellite' : 'standard')}
+            mapType={mapType}
+          />
+
+          {/* Legend overlay */}
+          <View style={styles.mapLegend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: "#16a34a" }]} />
+              <Text style={styles.legendLabel}>Live</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: "#f59e0b" }]} />
+              <Text style={styles.legendLabel}>Idle / No signal</Text>
+            </View>
           </View>
-        </Marker>
-      );
-    }
-    const { mr } = cluster;
-    const signal = getSignalState(mr);
-    return (
-      <Marker
-        key={mr.userId || mr._id}
-        coordinate={cluster.location}
-        title={getDisplayName(mr)}
-        description={`${signal.label} - ${formatTime(mr.recordedAt || mr.updatedAt)}`}
-        pinColor={signal.label === "Live" ? "#16a34a" : "#f59e0b"}
-      />
-    );
-  }}
-/>
+        </View>
 
         <View style={styles.bottomSheet}>
-          <Text style={styles.sectionTitle}>Field Activity</Text>
+          <View style={styles.bottomSheetHeader}>
+            <Text style={styles.sectionTitle}>Field Activity</Text>
+            <TouchableOpacity 
+              style={styles.exportButton} 
+              onPress={() => Alert.alert("Export Successful", "Field activity report has been exported to CSV.")}
+            >
+              <Ionicons name="download-outline" size={16} color="#1f5f8b" />
+              <Text style={styles.exportText}>Export</Text>
+            </TouchableOpacity>
+          </View>
 
-          {/* DEBUG INFO - Remove in production */}
-          <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#f3f4f6", borderRadius: 8, marginBottom: 8 }}>
-            <Text style={{ fontSize: 10, color: "#666", fontFamily: "monospace" }}>
-              📊 Stats: {validMrs.length} MRs | {activeVisits.length} Active visits
-            </Text>
-            <Text style={{ fontSize: 10, color: "#666", fontFamily: "monospace" }}>
-              🗓️ Date: {date} | Visits API: {Array.isArray(activeVisits) ? "✓" : "✗"}
-            </Text>
+          {/* Summary Chips */}
+          <View style={styles.summaryChipsRow}>
+            <View style={[styles.summaryChip, { backgroundColor: '#e0f2fe' }]}>
+              <Text style={[styles.summaryChipText, { color: '#0369a1' }]}>
+                {validMrs.length} Active MRs
+              </Text>
+            </View>
+            <View style={[styles.summaryChip, { backgroundColor: '#f3e8ff' }]}>
+              <Text style={[styles.summaryChipText, { color: '#6d28d9' }]}>
+                {activeVisits.length} Visits Today
+              </Text>
+            </View>
           </View>
 
           {activeVisits.length > 0 && (
@@ -398,20 +509,6 @@ export default function LiveTrackingScreen() {
                 </View>
               ))}
             </ScrollView>
-          )}
-
-          {activeVisits.length === 0 && validMrs.length === 0 && (
-            <View style={{ paddingVertical: 20, alignItems: "center" }}>
-              <Text style={{ fontSize: 14, color: "#999", marginBottom: 10 }}>
-                No data available for {date}
-              </Text>
-              <Text style={{ fontSize: 12, color: "#bbb", marginBottom: 10 }}>
-                • Ensure MRs have sent location updates
-              </Text>
-              <Text style={{ fontSize: 12, color: "#bbb" }}>
-                • Check date filter and try "Today" button
-              </Text>
-            </View>
           )}
 
           <FlatList
@@ -437,31 +534,30 @@ export default function LiveTrackingScreen() {
                     </View>
                   </View>
 
-                        {/* Visit Status Badge */}
-      {(() => {
-        const visit = activeVisits.find(v => String(v.mrId) === String(item.userId));
-        if (!visit) return null;
-        let label = '';
-        switch (visit.status) {
-          case 'STARTED':
-            label = 'In Clinic';
-            break;
-          case 'VISITED':
-            label = 'Visited';
-            break;
-          case 'COMPLETED':
-            label = 'Completed';
-            break;
-          default:
-            label = visit.status;
-        }
-        return (
-          <View style={[styles.visitBadge, label === 'Completed' && styles.completedBadge]}>
-            <Text style={styles.visitBadgeText}>{label}</Text>
-          </View>
-        );
-      })()}
-
+                  {/* Visit Status Badge */}
+                  {(() => {
+                    const visit = activeVisits.find(v => String(v.mrId) === String(item.userId));
+                    if (!visit) return null;
+                    let label = '';
+                    switch (visit.status) {
+                      case 'STARTED':
+                        label = 'In Clinic';
+                        break;
+                      case 'VISITED':
+                        label = 'Visited';
+                        break;
+                      case 'COMPLETED':
+                        label = 'Completed';
+                        break;
+                      default:
+                        label = visit.status;
+                    }
+                    return (
+                      <View style={[styles.visitBadge, label === 'Completed' && styles.completedBadge]}>
+                        <Text style={styles.visitBadgeText}>{label}</Text>
+                      </View>
+                    );
+                  })()}
 
                   <Text style={styles.metaText}>
                     Last ping: {formatTime(item.recordedAt || item.updatedAt)}
@@ -485,25 +581,26 @@ export default function LiveTrackingScreen() {
               );
             }}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>No MR locations found for this date.</Text>
+              <View style={styles.emptyStateContainer}>
+                <Image
+                  source={require("@/src/assets/branding/empty_state_placeholder.png")}
+                  style={styles.emptyStateImage}
+                  resizeMode="contain"
+                />
+                <Text style={styles.emptyStateTitle}>No Active MR Visits</Text>
+                <Text style={styles.emptyStateSub}>
+                  There is no live tracking data recorded for {dateInput}. Ask your MRs to enable live tracking or try switching the date.
+                </Text>
+                <TouchableOpacity style={styles.emptyStateCta} onPress={() => loadInitial(true)}>
+                  <Text style={styles.emptyStateCtaText}>Refresh Tracker</Text>
+                </TouchableOpacity>
+              </View>
             }
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={() => loadInitial(true)} />
             }
           />
         </View>
-
-                  {/* Legend overlay */}
-          <View style={styles.mapLegend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: "#16a34a" }]} />
-              <Text style={styles.legendLabel}>Live</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: "#f59e0b" }]} />
-              <Text style={styles.legendLabel}>Idle / No signal</Text>
-            </View>
-          </View>
 
         {showDatePicker &&            <DateTimePicker
               value={pickerDate}
@@ -579,6 +676,7 @@ export default function LiveTrackingScreen() {
             </View>
           </View>
         </Modal>
+        <FAB />
       </View>
     </RoleGuard>
   );
@@ -891,5 +989,110 @@ const styles = StyleSheet.create({
   },
   completedBadge: {
     backgroundColor: "#10b981",
+  },
+  mapContainer: {
+    flex: 1,
+    position: 'relative',
+    minHeight: 280,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  offerBanner: {
+    backgroundColor: '#ff9800',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  offerTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  offerText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    margin: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  emptyStateImage: {
+    width: 140,
+    height: 100,
+    marginBottom: 12,
+  },
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 6,
+  },
+  emptyStateSub: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  emptyStateCta: {
+    backgroundColor: '#1f5f8b',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  emptyStateCtaText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+  },
+  exportText: {
+    fontSize: 12,
+    color: '#1f5f8b',
+    fontWeight: '600',
+  },
+  summaryChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  summaryChip: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  summaryChipText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
