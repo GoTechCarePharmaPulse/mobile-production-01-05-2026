@@ -1,55 +1,80 @@
-// MR Dashboard Screen
+// app/(tenant)/crm/mrs/dashboard.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, FlatList, ActivityIndicator } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import MapView, { Marker } from 'react-native-maps';
-import FAB from '@/src/components/FAB';
 import { api } from '@/src/api/api';
+import FAB from '@/src/components/FAB';
 
-// Simple Stat Card component
-const StatCard = ({ label, value, icon }) => (
+// Types for fetched data
+interface MR {
+  _id: string;
+  name: string;
+  territory?: string;
+}
+
+interface Visit {
+  _id: string;
+  mrId: string;
+  doctorName: string;
+  date: string; // ISO string
+}
+
+interface Location {
+  mrId: string;
+  latitude: number;
+  longitude: number;
+}
+
+const StatCard = ({ title, value, icon }: { title: string; value: number | string; icon: string }) => (
   <View style={styles.statCard}>
-    <Ionicons name={icon} size={24} color="#fff" />
+    <Ionicons name={icon as any} size={28} color="#fff" />
     <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={styles.statLabel}>{title}</Text>
   </View>
 );
 
 export default function MRDashboard() {
   const router = useRouter();
+  const [mrs, setMRS] = useState<MR[]>([]);
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mrCount, setMrCount] = useState(0);
-  const [visitsToday, setVisitsToday] = useState(0);
-  const [locations, setLocations] = useState([]);
-  const [recentActivities, setRecentActivities] = useState([]);
 
+  // Fetch data on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // MR count
-        const mrRes = await api.get('/mrs');
-        setMrCount(Array.isArray(mrRes.data) ? mrRes.data.length : 0);
-
-        // Today's visits count (assuming endpoint supports a date filter)
-        const visitRes = await api.get('/visits?date=today');
-        setVisitsToday(Array.isArray(visitRes.data) ? visitRes.data.length : 0);
-
-        // Live MR locations (using existing live‑tracking endpoint)
-        const locRes = await api.get('/mr/locations');
+        const [mrRes, visitRes, locRes] = await Promise.all([
+          api.get('/mrs'),
+          api.get('/visits?date=today'),
+          api.get('/mr/locations'),
+        ]);
+        setMRS(Array.isArray(mrRes.data) ? mrRes.data : []);
+        setVisits(Array.isArray(visitRes.data) ? visitRes.data : []);
         setLocations(Array.isArray(locRes.data) ? locRes.data : []);
-
-        // Recent activities – latest 5 visits
-        const recentRes = await api.get('/visits?limit=5&sort=desc');
-        setRecentActivities(Array.isArray(recentRes.data) ? recentRes.data : []);
       } catch (e) {
-        console.log('Dashboard fetch error', e);
+        console.error('Dashboard fetch error', e);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
   }, []);
+
+  const renderVisitItem = ({ item }: { item: Visit }) => (
+    <TouchableOpacity
+      style={styles.visitItem}
+      onPress={() => router.push(`/crm/visits/${item._id}`)}
+    >
+      <Ionicons name="person-outline" size={20} color="#1f5f8b" />
+      <View style={styles.visitInfo}>
+        <Text style={styles.visitDoctor}>{item.doctorName}</Text>
+        <Text style={styles.visitDate}>{new Date(item.date).toLocaleDateString()}</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   if (loading) {
     return (
@@ -63,47 +88,43 @@ export default function MRDashboard() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>MR Dashboard</Text>
-        <View style={styles.statRow}>
-          <StatCard label="Total MRs" value={mrCount} icon="people-outline" />
-          <StatCard label="Today's Visits" value={visitsToday} icon="calendar-outline" />
+        {/* Stat cards */}
+        <View style={styles.statContainer}>
+          <StatCard title="Total MRs" value={mrs.length} icon="people-outline" />
+          <StatCard title="Today's Visits" value={visits.length} icon="calendar-outline" />
         </View>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Live MR Map</Text>
+        {/* Map preview */}
+        <View style={styles.mapWrapper}>
           <MapView
             style={styles.map}
             initialRegion={{
-              latitude: locations[0]?.lat || 20.5937,
-              longitude: locations[0]?.lng || 78.9629,
+              latitude: locations[0]?.latitude || 20.5937,
+              longitude: locations[0]?.longitude || 78.9629,
               latitudeDelta: 5,
               longitudeDelta: 5,
             }}
           >
-            {locations.map((loc, idx) => (
+            {locations.map(loc => (
               <Marker
-                key={idx}
-                coordinate={{ latitude: loc.lat, longitude: loc.lng }}
-                title={loc.mrName}
+                key={loc.mrId}
+                coordinate={{ latitude: loc.latitude, longitude: loc.longitude }}
+                title={mrs.find(m => m._id === loc.mrId)?.name || 'MR'}
               />
             ))}
           </MapView>
         </View>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activities</Text>
-          {recentActivities.map((act, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={styles.activityItem}
-              onPress={() => router.push(`/(tenant)/crm/visits/${act._id}`)}
-            >
-              <Ionicons name="time-outline" size={20} color="#1f5f8b" />
-              <View style={styles.activityText}>
-                <Text>{act.doctorName || 'Unknown Doctor'}</Text>
-                <Text style={styles.activitySub}>{new Date(act.createdAt).toLocaleString()}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Recent activity carousel */}
+        <Text style={styles.sectionHeader}>Recent Visits</Text>
+        <FlatList
+          data={visits.slice(0, 5)}
+          keyExtractor={item => item._id}
+          renderItem={renderVisitItem}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carousel}
+        />
       </ScrollView>
+      {/* Floating Action Button */}
       <FAB />
     </SafeAreaView>
   );
@@ -116,7 +137,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 120, // space for FAB
   },
   title: {
     fontSize: 24,
@@ -124,13 +145,13 @@ const styles = StyleSheet.create({
     color: '#1f5f8b',
     marginBottom: 16,
   },
-  statRow: {
+  statContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   statCard: {
-    width: '48%',
+    flex: 0.48,
     backgroundColor: '#1f5f8b',
     borderRadius: 12,
     padding: 16,
@@ -138,7 +159,8 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
   statValue: {
     fontSize: 28,
@@ -151,36 +173,48 @@ const styles = StyleSheet.create({
     color: '#e0e7ff',
     marginTop: 4,
   },
-  section: {
+  mapWrapper: {
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
     marginBottom: 24,
+    backgroundColor: '#e5e7eb',
   },
-  sectionTitle: {
-    fontSize: 18,
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sectionHeader: {
+    fontSize: 20,
     fontWeight: '600',
     color: '#1f5f8b',
     marginBottom: 8,
   },
-  map: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
+  carousel: {
+    paddingVertical: 8,
   },
-  activityItem: {
+  visitItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
     backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 8,
+    borderRadius: 10,
+    padding: 12,
+    marginRight: 12,
+    minWidth: 200,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  activityText: {
-    marginLeft: 12,
+  visitInfo: {
+    marginLeft: 8,
   },
-  activitySub: {
+  visitDoctor: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111',
+  },
+  visitDate: {
     fontSize: 12,
     color: '#666',
   },
