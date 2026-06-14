@@ -43,8 +43,8 @@ type MenuItem = {
 
 export default function DrawerContent() {
 
-  const { user } = useAuth();
-
+  const auth = useAuth();
+  const user = auth?.user;
   const router = useRouter();
 
   const [menus, setMenus] =
@@ -293,18 +293,7 @@ export default function DrawerContent() {
             USER HEADER
         ========================= */}
 
-        <View style={styles.header}>
 
-          <Text style={styles.name}>
-            {user?.firstName || ""}
-            {" "}
-            {user?.lastName || ""}
-          </Text>
-
-          <Text style={styles.role}>
-            {user?.role?.toUpperCase()}
-          </Text>
-        </View>
 
         {/* =========================
             LOADING
