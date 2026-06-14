@@ -157,6 +157,12 @@ export default function DrawerContent() {
       children: [
 
         {
+          title: "Dashboard",
+          path: "/(tenant)/crm/dashboard",
+          icon: "stats-chart-outline",
+        },
+
+        {
           title: "Doctors",
           path: "/(tenant)/crm/doctors",
           icon: "medkit-outline",
