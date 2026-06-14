@@ -21,6 +21,16 @@
         "EXPO_PUBLIC_API_URL": "https://pharmapulse-backend-rl2h.onrender.com/api",
         "EXPO_USE_UPDATES": "false"
       }
+    },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://pharmapulse-backend-rl2h.onrender.com/api"
+      }
     }
   }
 }
