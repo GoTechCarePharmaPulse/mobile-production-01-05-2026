@@ -186,6 +186,11 @@ export default function DrawerContent() {
           path: "/(tenant)/crm/orders",
           icon: "cart-outline",
         },
+        {
+          title: "MR Dashboard",
+          path: "/(tenant)/crm/mrs/dashboard",
+          icon: "grid-outline",
+        },
       ],
     },
   ];
