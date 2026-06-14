@@ -7,8 +7,6 @@ import { hasPermission, PERMISSIONS } from "@/src/config/permissions";
 import { useAuth } from "@/src/context/AuthContext";
 import DrawerContent from "@/src/components/navigation/DrawerContent";
 import { useRouter } from "expo-router";
-import HeaderBar from "@/src/components/HeaderBar";
-
 
 export default function CompanyLayout() {
   const { user, logout, loading } = useAuth();
@@ -18,18 +16,15 @@ export default function CompanyLayout() {
   // ✅ 1. Wait for Auth to fully resolve
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
         <ActivityIndicator size="large" color="#1e40af" />
         <Text style={{ marginTop: 10 }}>Syncing Session...</Text>
       </View>
     );
   }
+
   return (
     <View style={{ flex: 1 }}>
-      <HeaderBar
-        logoSource={require("@/src/assets/branding/logo_placeholder.png")}
-        onAvatarPress={() => router.push('/profile')}
-      />
       <Drawer
         drawerContent={(props) => <DrawerContent {...props} />}
         screenOptions={{
@@ -37,54 +32,38 @@ export default function CompanyLayout() {
           headerLeft: () => <DrawerToggleButton />,
           headerRight: () => (
             <TouchableOpacity onPress={() => setOpen(!open)} style={{ marginRight: 15 }}>
-              <Ionicons 
-                name="person-circle-outline" 
-                size={30} 
-                color="#1e40af" 
-              />
+              <Ionicons name="person-circle-outline" size={30} color="#1e40af" />
             </TouchableOpacity>
           ),
         }}
       >
         <Drawer.Screen name="dashboard/index" options={{ title: "Dashboard" }} />
-        
-        {/* ✅ Strict Permission Check */}
         {hasPermission(user, PERMISSIONS.users?.view) && (
           <Drawer.Screen name="organization/users/index" options={{ title: "User Management" }} />
         )}
-        
         {hasPermission(user, PERMISSIONS.crm?.view) && (
           <Drawer.Screen name="crm/visits/index" options={{ title: "Visit Logs" }} />
         )}
-
-	{hasPermission(user, PERMISSIONS.crm?.view) && (
- 	 <Drawer.Screen name="crm/live-tracking/index" options={{ title: "MR Tracker" }} />
-	)}
-
+        {hasPermission(user, PERMISSIONS.crm?.view) && (
+          <Drawer.Screen name="crm/live-tracking/index" options={{ title: "MR Tracker" }} />
+        )}
       </Drawer>
 
-      {/* ✅ 3. Enhanced Dropdown Menu */}
+      {/* ✅ Enhanced Dropdown Menu */}
       {open && (
         <>
           {/* Overlay to close menu when clicking outside */}
-          <Pressable 
-            style={StyleSheet.absoluteFill} 
-            onPress={() => setOpen(false)} 
-          />
-          
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
           <View style={styles.dropdown}>
             <TouchableOpacity style={styles.menuItem} onPress={() => { setOpen(false); router.push("/profile"); }}>
               <Ionicons name="person-outline" size={18} color="#444" />
               <Text style={styles.dropText}>My Profile</Text>
             </TouchableOpacity>
-            
             <TouchableOpacity style={styles.menuItem} onPress={() => { setOpen(false); router.push("/profile/edit"); }}>
               <Ionicons name="create-outline" size={18} color="#444" />
               <Text style={styles.dropText}>Edit Profile</Text>
             </TouchableOpacity>
-
             <View style={styles.separator} />
-
             <TouchableOpacity style={styles.menuItem} onPress={() => { setOpen(false); logout(); }}>
               <Ionicons name="log-out-outline" size={18} color="red" />
               <Text style={[styles.dropText, { color: "red" }]}>Logout</Text>
@@ -115,8 +94,8 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     paddingHorizontal: 15,
   },
@@ -127,7 +106,7 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     marginVertical: 5,
-  }
+  },
 });
