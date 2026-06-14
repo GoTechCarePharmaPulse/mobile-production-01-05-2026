@@ -11,14 +11,16 @@ export default function AnalyticsScreen() {
       <Text style={{ marginTop: 10 }}>
         Charts, reports and business intelligence will appear here.
       </Text>
-      <LineChart
- data={{
-  labels:["Jan","Feb","Mar"],
-  datasets:[{data:[30,45,28]}]
- }}
- width={320}
- height={220}
-/>
+      <View
+  style={{
+    marginTop: 20,
+    padding: 20,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
+  }}
+>
+  <Text>Analytics charts coming soon.</Text>
+</View>
     </View>
   );
 }

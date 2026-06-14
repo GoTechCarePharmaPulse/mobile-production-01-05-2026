@@ -8,10 +8,24 @@ import {
 } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import MapView, { Marker, Polyline } from "react-native-maps";
+
 
 import RoleGuard from "@/src/guards/RoleGuard";
 import { trackingService } from "@/src/services/trackingService";
+
+import { Platform } from "react-native";
+
+let MapView: any = null;
+let Marker: any = null;
+let Polyline: any = null;
+
+if (Platform.OS !== "web") {
+  const Maps = require("react-native-maps");
+
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  Polyline = Maps.Polyline;
+}
 
 const todayString = () => new Date().toISOString().slice(0, 10);
 
@@ -112,21 +126,52 @@ export default function RouteReplayScreen() {
   return (
     <RoleGuard allowedRoles={["admin", "manager"]}>
       <View style={{ flex: 1 }}>
-        <MapView
-          style={{ flex: 1 }}
-          initialRegion={{
-            latitude: start.latitude,
-            longitude: start.longitude,
-            latitudeDelta: 0.1,
-            longitudeDelta: 0.1,
-          }}
-        >
-          <Marker coordinate={start} title="Start" description={formatTime(start.recordedAt)} />
+        {Platform.OS === "web" ? (
+  <View
+    style={{
+      height: 300,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "#f8fafc",
+    }}
+  >
+    <Text>Maps are available only on Android/iOS.</Text>
+  </View>
+) : (
+  <MapView
+  style={StyleSheet.absoluteFill}
+  initialRegion={{
+    latitude: start.latitude,
+    longitude: start.longitude,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  }}
+>
+  <Polyline
+    coordinates={coordinates}
+    strokeWidth={4}
+    strokeColor="#2563eb"
+  />
 
-          <Marker coordinate={end} title="End" description={formatTime(end.recordedAt)} />
+  <Marker
+    coordinate={{
+      latitude: start.latitude,
+      longitude: start.longitude,
+    }}
+    title="Start"
+    pinColor="green"
+  />
 
-          <Polyline coordinates={coordinates} strokeWidth={4} strokeColor="#1f5f8b" />
-        </MapView>
+  <Marker
+    coordinate={{
+      latitude: end.latitude,
+      longitude: end.longitude,
+    }}
+    title="End"
+    pinColor="red"
+  />
+</MapView>
+)}
 
         <View style={styles.infoBox}>
           <View style={styles.infoHeader}>

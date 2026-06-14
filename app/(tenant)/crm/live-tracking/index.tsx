@@ -13,8 +13,6 @@ import {
   Alert,
 } from "react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import MapView from "react-native-map-clustering";
-import { Marker } from "react-native-maps";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -25,7 +23,17 @@ import { trackingService } from "@/src/services/trackingService";
 import { initSocket } from "@/src/socket";
 import FAB from "@/src/components/FAB";
 import MapControls from "@/src/components/MapControls";
+import { Platform } from "react-native";
 
+let MapView: any = null;
+let Marker: any = null;
+
+if (Platform.OS !== "web") {
+  const Maps = require("react-native-maps");
+
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+}
 type MRLocation = {
   _id?: string;
   userId?: string;
@@ -412,39 +420,45 @@ export default function LiveTrackingScreen() {
         </ScrollView>
 
         <View style={styles.mapContainer}>
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            region={region}
-            onRegionChangeComplete={(r) => setRegion(r)}
-            mapType={mapType}
-            renderCluster={(cluster, onPress) => (
-              <Marker
-                coordinate={cluster.coordinate}
-                key={`cluster-${cluster.clusterId}`}
-                onPress={onPress}
-              >
-                <View style={styles.clusterMarker}>
-                  <Text style={styles.clusterText}>{cluster.pointCount}</Text>
-                </View>
-              </Marker>
-            )}
-          >
-            {(filterMRId ? validMrs.filter(mr => String(mr.userId) === String(filterMRId)) : validMrs).map(mr => {
-              const signal = getSignalState(mr);
-              const lat = getLatitude(mr) || 0;
-              const lng = getLongitude(mr) || 0;
-              return (
-                <Marker
-                  key={mr.userId || mr._id}
-                  coordinate={{ latitude: lat, longitude: lng }}
-                  title={getDisplayName(mr)}
-                  description={`${signal.label} - ${formatTime(mr.recordedAt || mr.updatedAt)}`}
-                  pinColor={signal.label === "Live" ? "#16a34a" : "#f59e0b"}
-                />
-              );
-            })}
-          </MapView>
+          {Platform.OS === "web" ? (
+            <View
+              style={{
+                height: 300,
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "#f8fafc",
+              }}
+            >
+              <Text>Maps are available only on Android/iOS.</Text>
+            </View>
+          ) : (
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              mapType={mapType}
+              initialRegion={{
+                latitude: initialLatitude,
+                longitude: initialLongitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }}
+            >
+              {(filterMRId ? validMrs.filter(mr => String(mr.userId) === String(filterMRId)) : validMrs).map(mr => {
+                const signal = getSignalState(mr);
+                const lat = getLatitude(mr) || 0;
+                const lng = getLongitude(mr) || 0;
+                return (
+                  <Marker
+                    key={mr.userId || mr._id}
+                    coordinate={{ latitude: lat, longitude: lng }}
+                    title={getDisplayName(mr)}
+                    description={`${signal.label} - ${formatTime(mr.recordedAt || mr.updatedAt)}`}
+                    pinColor={signal.label === "Live" ? "#16a34a" : "#f59e0b"}
+                  />
+                );
+              })}
+            </MapView>
+          )}
 
           <MapControls
             onZoomIn={handleZoomIn}
