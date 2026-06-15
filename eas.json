@@ -29,7 +29,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://pharmapulse-backend-rl2h.onrender.com/api"
+        "EAS_SKIP_AUTO_FINGERPRINT": "1",
       }
     }
   }

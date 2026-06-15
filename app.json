@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "updates": {
-      "enabled": false
+      "enabled": true,
     },
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -47,7 +47,7 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundColor": "#E6F4FE"
       },
-      "edgeToEdgeEnabled": true,
+
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
