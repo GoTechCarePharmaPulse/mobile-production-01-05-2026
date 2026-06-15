@@ -7,7 +7,7 @@
     "icon": "./src/assets/branding/app-icon.png",
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+
     "updates": {
       "enabled": true,
     },
