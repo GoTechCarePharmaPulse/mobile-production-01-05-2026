@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   TextInput,
   FlatList,
-  ScrollView,
   StyleSheet,
   ActivityIndicator,
   Alert,
@@ -16,14 +15,15 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/src/api/api";
 import { useAuth } from "@/src/context/AuthContext";
-import { useFocusEffect } from "@react-navigation/native";
+
 import ActionMenu from "@/src/components/common/ActionMenu";
-import { Dimensions } from "react-native";
+
 
 
 export default function UsersScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,12 +36,12 @@ export default function UsersScreen() {
 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
   const [onEndReachedCalled, setOnEndReachedCalled] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false);
   const [resetUser, setResetUser] = useState<any>(null);
   const [newPassword, setNewPassword] = useState("");
-  const screenHeight = Dimensions.get("window").height;
+
 
   const canCreate =
   user?.role === "admin" ||
@@ -237,29 +237,34 @@ const getActions = (item: any) => {
   return [
     {
       label: "View",
+      icon: "eye-outline",
       onPress: () => router.push(`/organization/users/${item._id}`),
       color: "#2563eb",
       show: !!item._id,
     },
     {
       label: "Edit",
+      icon: "create-outline",
       onPress: () => handleEdit(item),
       color: "#2563eb",
       show: ["admin", "manager", "mr"].includes(user?.role),
     },
     {
       label: "Call",
+      icon: "call-outline",
       onPress: () => handleCall(item.mobile),
       color: "#059669",
     },
     {
       label: item.isActive ? "Deactivate" : "Activate",
+      icon: item.isActive ? "pause-circle-outline" : "play-circle-outline",
       onPress: () => handleToggleActive(item),
       color: "#f59e0b",
       show: ["admin", "manager"].includes(user?.role),
     },
     {
       label: "Approve",
+      icon: "checkmark-circle-outline",
       onPress: () => handleApprove(item._id),
       show:
         ["admin", "manager"].includes(user?.role) &&
@@ -268,6 +273,7 @@ const getActions = (item: any) => {
     },
     {
       label: "Reject",
+      icon: "close-circle-outline",
       onPress: () => handleReject(item._id),
       color: "orange",
       show:
@@ -276,17 +282,20 @@ const getActions = (item: any) => {
     },
     {
       label: "Navigate",
+      icon: "navigate-outline",
       onPress: () => handleNavigate(item),
       show: item.role === "doctor",
       color: "#0ea5e9",
     },
     {
       label: "Resend OTP",
+      icon: "mail-outline",
       onPress: () => handleResendOTP(item.mobile),
       color: "#6366f1",
     },
     {
       label: "Delete",
+      icon: "trash-outline",
       onPress: () => handleDelete(item._id),
       color: "#ef4444",
       show: ["admin", "manager"].includes(user?.role),
@@ -319,15 +328,19 @@ const renderItem = ({ item }: any) => {
         </Text>
 
         <View style={{ flex: 1, alignItems: "flex-end" }}>
-  <TouchableOpacity
-    onPress={() =>
-      setOpenMenuId(openMenuId === item._id ? null : item._id)
+  <ActionMenu
+    actions={getActions(item)}
+    isOpen={openMenuId === item._id}
+    onToggle={() =>
+      setOpenMenuId(
+        openMenuId === item._id
+          ? null
+          : item._id
+      )
     }
-    style={{ padding: 5 }}
-  >
-    <Ionicons name="ellipsis-vertical" size={20} color="#333" />
-  </TouchableOpacity>
+  />
 </View>
+
       </View>
     </View>
   );
@@ -446,43 +459,7 @@ onEndReached={() => {
       )}
 
 	{/* ACTION MENU OVERLAY */}
-{openMenuId && (
-  <View style={styles.menuOverlay}>
-    <TouchableOpacity
-      style={StyleSheet.absoluteFill}
-      onPress={() => setOpenMenuId(null)}
-    />
 
-    <View style={styles.menuContainer}>
-      <ScrollView
-        style={{
-          maxHeight: Math.min(
-            Dimensions.get("window").height * 0.5,
-            getActions(users.find(u => u._id === openMenuId)).length * 50
-          ),
-        }}
-        contentContainerStyle={{ paddingVertical: 5 }}
-      >
-        {getActions(users.find(u => u._id === openMenuId))
-          .filter(a => a.show !== false)
-          .map((action, idx) => (
-            <TouchableOpacity
-              key={idx}
-              onPress={() => {
-                action.onPress();
-                setOpenMenuId(null);
-              }}
-              style={styles.menuItem}
-            >
-              <Text style={{ color: action.color || "#000" }}>
-                {action.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-      </ScrollView>
-    </View>
-  </View>
-)}
 
     </SafeAreaView>
   );
@@ -548,6 +525,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
+  tableRowContainer: {
+    overflow: "visible",
+    zIndex: 1,
+  },
   tableRow: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -580,43 +561,12 @@ const styles = StyleSheet.create({
     elevation: 5,      // Android
     zIndex: 999,       // iOS fix
   },
-  menuOverlay: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  justifyContent: "flex-start",
-  alignItems: "flex-end",
-  backgroundColor: "rgba(0,0,0,0.3)",
-  zIndex: 9999,
-  paddingTop: 50, // adjust based on header height
-  paddingRight: 16,
-},
+  
 
-menuContainer: {
-  backgroundColor: "#fff",
-  borderRadius: 10,
-  minWidth: 200,
-  maxWidth: "80%",
-  elevation: 5,
-  zIndex: 10000,
-  overflow: "hidden",
-},
 
-menuItem: {
-  paddingVertical: 12,
-  paddingHorizontal: 20,
-  borderBottomWidth: 1,
-  borderBottomColor: "#eee",
-},
 
-menuCloseArea: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-},
+
+
+
   
 });

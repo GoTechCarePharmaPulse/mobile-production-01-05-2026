@@ -1,5 +1,4 @@
-import { Drawer } from "expo-router/drawer";
-import { DrawerToggleButton } from "@react-navigation/drawer";
+import { Drawer, DrawerToggleButton } from "expo-router/drawer";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";

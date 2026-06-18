@@ -1,36 +1,25 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-} from "react-native";
-
-import {
+import React, {
   useEffect,
   useMemo,
   useState,
 } from "react";
 
 import {
-  DrawerContentScrollView,
-} from "@react-navigation/drawer";
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 
-import {
-  Ionicons,
-} from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 
-import {
-  useRouter,
-} from "expo-router";
+import { useRouter } from "expo-router";
 
-import {
-  useAuth,
-} from "@/src/context/AuthContext";
+import { useAuth } from "@/src/context/AuthContext";
 
-import {
-  api,
-} from "@/src/api/api";
+import { api } from "@/src/api/api";
 
 type MenuItem = {
   title: string;
@@ -42,7 +31,6 @@ type MenuItem = {
 };
 
 export default function DrawerContent() {
-
   const auth = useAuth();
   const user = auth?.user;
   const router = useRouter();
@@ -63,7 +51,6 @@ export default function DrawerContent() {
   const safeNavigate = (
     path?: string
   ) => {
-
     if (!path) {
       console.warn(
         "Navigation blocked: Empty path"
@@ -72,14 +59,12 @@ export default function DrawerContent() {
     }
 
     try {
-
       let finalPath = path;
 
       if (
         !finalPath.startsWith("/")
       ) {
-        finalPath =
-          `/${finalPath}`;
+        finalPath = `/${finalPath}`;
       }
 
       finalPath =
@@ -96,9 +81,7 @@ export default function DrawerContent() {
       router.push(
         finalPath as any
       );
-
     } catch (err: any) {
-
       console.log(
         "Navigation Error:",
         err?.message
@@ -113,7 +96,6 @@ export default function DrawerContent() {
   const hasPermission = (
     permission?: string
   ) => {
-
     if (!permission) {
       return true;
     }
@@ -144,7 +126,6 @@ export default function DrawerContent() {
   ========================= */
 
   const staticMenus: MenuItem[] = [
-
     {
       title: "Dashboard",
       icon: "grid-outline",
@@ -155,40 +136,48 @@ export default function DrawerContent() {
       title: "CRM",
       icon: "briefcase-outline",
       children: [
-
         {
           title: "Dashboard",
-          path: "/(tenant)/crm/dashboard",
-          icon: "stats-chart-outline",
+          path:
+            "/(tenant)/crm/dashboard",
+          icon:
+            "stats-chart-outline",
         },
 
         {
           title: "Doctors",
-          path: "/(tenant)/crm/doctors",
+          path:
+            "/(tenant)/crm/doctors",
           icon: "medkit-outline",
         },
 
         {
           title: "Visits",
-          path: "/(tenant)/crm/visits",
-          icon: "calendar-outline",
-	  
+          path:
+            "/(tenant)/crm/visits",
+          icon:
+            "calendar-outline",
         },
 
         {
           title: "MR Tracker",
-          path: "/(tenant)/crm/live-tracking",
-          icon: "location-outline",
+          path:
+            "/(tenant)/crm/live-tracking",
+          icon:
+            "location-outline",
         },
 
         {
           title: "Orders",
-          path: "/(tenant)/crm/orders",
+          path:
+            "/(tenant)/crm/orders",
           icon: "cart-outline",
         },
+
         {
           title: "MR Dashboard",
-          path: "/(tenant)/crm/mrs/dashboard",
+          path:
+            "/(tenant)/crm/mrs/dashboard",
           icon: "grid-outline",
         },
       ],
@@ -196,20 +185,17 @@ export default function DrawerContent() {
   ];
 
   /* =========================
-     FETCH API MENUS
+     FETCH MENUS
   ========================= */
 
   useEffect(() => {
-
     if (!user) {
       return;
     }
 
     const fetchMenus =
       async () => {
-
         try {
-
           setLoading(true);
 
           const res =
@@ -225,23 +211,18 @@ export default function DrawerContent() {
               : [];
 
           setMenus(apiMenus);
-
         } catch (err) {
-
           console.log(
             "Menu API failed, using fallback"
           );
 
           setMenus([]);
-
         } finally {
-
           setLoading(false);
         }
       };
 
     fetchMenus();
-
   }, [user]);
 
   /* =========================
@@ -250,11 +231,10 @@ export default function DrawerContent() {
 
   const finalMenus =
     useMemo(() => {
-
       const combined =
-  menus.length > 0
-    ? menus
-    : staticMenus;
+        menus.length > 0
+          ? menus
+          : staticMenus;
 
       return combined.filter(
         (menu) =>
@@ -262,7 +242,6 @@ export default function DrawerContent() {
             menu.permission
           )
       );
-
     }, [menus, user]);
 
   /* =========================
@@ -272,7 +251,6 @@ export default function DrawerContent() {
   const toggleMenu = (
     title: string
   ) => {
-
     setOpenMenus((prev) => ({
       ...prev,
       [title]:
@@ -285,71 +263,58 @@ export default function DrawerContent() {
   }
 
   return (
-    <DrawerContentScrollView>
-
+    <ScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+      }}
+      showsVerticalScrollIndicator={
+        false
+      }
+    >
       <View style={styles.container}>
-
-        {/* =========================
-            USER HEADER
-        ========================= */}
-
-
-
-        {/* =========================
-            LOADING
-        ========================= */}
+        {/* LOADING */}
 
         {loading && (
           <ActivityIndicator />
         )}
 
-        {/* =========================
-            MENUS
-        ========================= */}
+        {/* MENUS */}
 
         {finalMenus.map(
           (menu, index) => {
-
             const hasChildren =
-              menu.children &&
-              menu.children.length > 0;
+              !!menu.children?.length;
 
             return (
-
               <View
                 key={`${menu.title}-${index}`}
                 style={{
                   marginBottom: 8,
                 }}
               >
-
                 <TouchableOpacity
-                  style={styles.menuItem}
+                  style={
+                    styles.menuItem
+                  }
                   onPress={() => {
-
                     if (
                       hasChildren
                     ) {
-
                       toggleMenu(
                         menu.title
                       );
-
                     } else {
-
                       safeNavigate(
                         menu.path
                       );
                     }
                   }}
                 >
-
                   <View
                     style={
                       styles.menuLeft
                     }
                   >
-
                     <Ionicons
                       name={
                         (menu.icon ||
@@ -369,7 +334,6 @@ export default function DrawerContent() {
                   </View>
 
                   {hasChildren && (
-
                     <Ionicons
                       name={
                         openMenus[
@@ -384,10 +348,6 @@ export default function DrawerContent() {
                   )}
                 </TouchableOpacity>
 
-                {/* =========================
-                    CHILDREN
-                ========================= */}
-
                 {openMenus[
                   menu.title
                 ] &&
@@ -396,7 +356,6 @@ export default function DrawerContent() {
                       child,
                       idx
                     ) => (
-
                       <TouchableOpacity
                         key={`${child.title}-${idx}`}
                         style={
@@ -408,7 +367,6 @@ export default function DrawerContent() {
                           )
                         }
                       >
-
                         <Ionicons
                           name={
                             (child.icon ||
@@ -423,7 +381,9 @@ export default function DrawerContent() {
                             styles.childText
                           }
                         >
-                          {child.title}
+                          {
+                            child.title
+                          }
                         </Text>
                       </TouchableOpacity>
                     )
@@ -433,35 +393,14 @@ export default function DrawerContent() {
           }
         )}
       </View>
-    </DrawerContentScrollView>
+    </ScrollView>
   );
 }
 
 const styles =
   StyleSheet.create({
-
     container: {
       padding: 20,
-    },
-
-    header: {
-      marginBottom: 20,
-      paddingBottom: 12,
-      borderBottomWidth: 1,
-      borderBottomColor:
-        "#eee",
-    },
-
-    name: {
-      fontSize: 16,
-      fontWeight: "700",
-      color: "#111",
-    },
-
-    role: {
-      marginTop: 4,
-      fontSize: 12,
-      color: "#666",
     },
 
     menuItem: {
