@@ -17,15 +17,24 @@ import { api } from "@/src/api/api";
 import { useAuth } from "@/src/context/AuthContext";
 
 import ActionMenu from "@/src/components/common/ActionMenu";
+import Modal from "@/src/components/ui/Modal";
 
-
+type User = {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  mobile?: string;
+  role?: string;
+  isActive?: boolean;
+  approvalStatus?: string;
+};
 
 export default function UsersScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [search, setSearch] = useState("");
@@ -39,7 +48,7 @@ export default function UsersScreen() {
 
   const [onEndReachedCalled, setOnEndReachedCalled] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false);
-  const [resetUser, setResetUser] = useState<any>(null);
+  const [resetUser, setResetUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
 
 
@@ -200,34 +209,50 @@ const handleToggleActive = async (item: any) => {
   }
 };
 
-const handleResetPassword = async (item: any) => {
-  Alert.prompt(
-    "Reset Password",
-    `Enter new password for ${item.mobile}`,
-    async (password) => {
-      if (!password?.trim()) return;
-
-      try {
-        await api.put(`/users/${item._id}`, {
-          password,
-        });
-
-        Alert.alert("Success", "Password updated");
-      } catch (err: any) {
-        console.log("RESET ERROR:", err?.response?.data || err);
-
-        Alert.alert(
-          "Error",
-          err?.response?.data?.message || "Reset failed"
-        );
-      }
-    }
-  );
+const handleResetPassword = (item: User) => {
+  setResetUser(item);
+  setNewPassword("");
 };
 
 const exportToExcel = () => {
   console.log("Exporting users:", users);
   Alert.alert("Export started (hook backend later)");
+};
+const saveResetPassword = async () => {
+  if (!resetUser) return;
+
+  if (newPassword.trim().length < 6) {
+  Alert.alert(
+    "Validation",
+    "Password must be at least 6 characters"
+  );
+  return;
+}
+
+  try {
+    await api.put(`/users/${resetUser._id}`, {
+      password: newPassword,
+      mustResetPassword: true,
+    });
+
+    Alert.alert("Success", "Password updated");
+
+    setResetUser(null);
+    setNewPassword("");
+
+    fetchUsers(true);
+  } catch (err: any) {
+    console.log(
+      "RESET ERROR:",
+      err?.response?.data || err
+    );
+
+    Alert.alert(
+      "Error",
+      err?.response?.data?.message ||
+        "Password reset failed"
+    );
+  }
 };
 
 /* ================= ACTION MENU GENERATOR ================= */
@@ -294,6 +319,13 @@ const getActions = (item: any) => {
       color: "#6366f1",
     },
     {
+  label: "Reset Password",
+  icon: "key-outline",
+  onPress: () => handleResetPassword(item),
+  color: "#7c3aed",
+  show: ["admin", "manager"].includes(user?.role),
+},
+    {
       label: "Delete",
       icon: "trash-outline",
       onPress: () => handleDelete(item._id),
@@ -327,7 +359,15 @@ const renderItem = ({ item }: any) => {
           {item.isActive ? "ACTIVE" : "INACTIVE"}
         </Text>
 
-        <View style={{ flex: 1, alignItems: "flex-end" }}>
+        <View
+  style={{
+    flex: 1,
+    alignItems: "flex-end",
+    position: "relative",
+    zIndex: 9999,
+    elevation: 9999,
+  }}
+>
   <ActionMenu
     actions={getActions(item)}
     isOpen={openMenuId === item._id}
@@ -460,7 +500,78 @@ onEndReached={() => {
 
 	{/* ACTION MENU OVERLAY */}
 
+    <Modal
+  visible={!!resetUser}
+  onClose={() => {
+    setResetUser(null);
+    setNewPassword("");
+  }}
+>
+  <Text
+    style={{
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 12,
+    }}
+  >
+    Reset Password
+  </Text>
 
+  <Text style={{ marginBottom: 12 }}>
+    {resetUser?.mobile}
+  </Text>
+
+  <TextInput
+    placeholder="Enter new password"
+    secureTextEntry
+    value={newPassword}
+    onChangeText={setNewPassword}
+    style={{
+      borderWidth: 1,
+      borderColor: "#ddd",
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+    }}
+  />
+
+  <View
+    style={{
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 10,
+    }}
+  >
+    <TouchableOpacity
+      onPress={() => {
+        setResetUser(null);
+        setNewPassword("");
+      }}
+    >
+      <Text
+        style={{
+          color: "#666",
+          fontWeight: "600",
+        }}
+      >
+        Cancel
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      onPress={saveResetPassword}
+    >
+      <Text
+        style={{
+          color: "#2563eb",
+          fontWeight: "700",
+        }}
+      >
+        Save
+      </Text>
+    </TouchableOpacity>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 }
@@ -527,6 +638,7 @@ const styles = StyleSheet.create({
 
   tableRowContainer: {
     overflow: "visible",
+    position: "relative",
     zIndex: 1,
   },
   tableRow: {
@@ -561,12 +673,6 @@ const styles = StyleSheet.create({
     elevation: 5,      // Android
     zIndex: 999,       // iOS fix
   },
-  
-
-
-
-
-
 
   
 });
