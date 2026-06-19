@@ -10,7 +10,7 @@ import {
   Alert,
   Linking,
 } from "react-native";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/src/api/api";
