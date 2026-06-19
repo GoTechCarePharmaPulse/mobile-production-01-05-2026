@@ -118,6 +118,8 @@ const styles = StyleSheet.create({
   container: {
     position: "relative",
     alignItems: "flex-end",
+    zIndex: 99999,
+    elevation: 999,
   },
 
   menu: {

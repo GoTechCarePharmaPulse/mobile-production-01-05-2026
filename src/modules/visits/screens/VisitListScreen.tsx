@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,16 +16,21 @@ import { useQuery } from '@tanstack/react-query';
 
 import RoleGuard from '@/src/guards/RoleGuard';
 import { visitService } from '@/src/modules/visits/api/visitService';
+import { doctorService } from '@/src/modules/doctor/api/doctorService';
 import type { Visit } from '@/src/types/visit';
+import type { User } from '@/src/types/user';
 
 export default function VisitListScreen() {
   const router = useRouter();
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'STARTED' | 'VISITED' | 'COMPLETED'>('ALL');
   const [searchText, setSearchText] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [showTodayOnly, setShowTodayOnly] = useState(true);
+  const [doctorCache, setDoctorCache] = useState<Record<string, User>>({});
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
 
   const { data: visitsData, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['visits', selectedDate],
+    queryKey: ['visits', selectedDate, filterStatus],
     queryFn: () =>
       visitService.getMyVisits({
         date: selectedDate,
@@ -33,12 +38,47 @@ export default function VisitListScreen() {
       }),
   });
 
-  const visits = visitsData || [];
+  const visits = useMemo(() => visitsData || [], [visitsData]);
+
+  // Load doctor details for all visits
+  useEffect(() => {
+    if (visits.length === 0) return;
+    
+    const doctorIds = visits
+      .map((v) => v.doctorId)
+      .filter((id): id is string => !!id && !doctorCache[id]);
+
+    if (doctorIds.length === 0) return;
+
+    setLoadingDoctors(true);
+    Promise.all(
+      doctorIds.map((dId) =>
+        doctorService
+          .getDoctorById(dId)
+          .then((doctor) => ({ dId, doctor }))
+          .catch(() => ({ dId, doctor: null }))
+      )
+    )
+      .then((results) => {
+        const newCache = { ...doctorCache };
+        results.forEach(({ dId, doctor }) => {
+          if (doctor) newCache[dId] = doctor;
+        });
+        setDoctorCache(newCache);
+      })
+      .finally(() => setLoadingDoctors(false));
+  }, [visits]);
 
   const filteredVisits = visits.filter((visit) => {
     if (searchText.trim()) {
-      // Filter by doctor name or clinic name (would need to fetch doctor details)
-      return visit.notes?.toLowerCase().includes(searchText.toLowerCase());
+      const doctor = visit.doctorId ? doctorCache[visit.doctorId] : null;
+      const doctorName = doctor
+        ? `${doctor.firstName || ''} ${doctor.lastName || ''}`.toLowerCase()
+        : '';
+      return (
+        doctorName.includes(searchText.toLowerCase()) ||
+        visit.notes?.toLowerCase().includes(searchText.toLowerCase())
+      );
     }
     return true;
   });
@@ -65,6 +105,13 @@ export default function VisitListScreen() {
 
   const renderVisitCard = ({ item: visit }: { item: Visit }) => {
     const statusInfo = getStatusColor(visit.status);
+    const doctor = visit.doctorId ? doctorCache[visit.doctorId] : null;
+    const doctorName = doctor
+      ? `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim()
+      : 'Unknown Doctor';
+    const doctorInitials = doctor
+      ? `${doctor.firstName?.[0] || 'D'}${doctor.lastName?.[0] || '?'}`
+      : 'D?';
 
     return (
       <TouchableOpacity
@@ -75,6 +122,19 @@ export default function VisitListScreen() {
           }
         }}
       >
+        {/* Doctor Info */}
+        <View style={styles.doctorRow}>
+          <View style={styles.doctorAvatar}>
+            <Text style={styles.doctorAvatarText}>{doctorInitials}</Text>
+          </View>
+          <View style={styles.doctorInfo}>
+            <Text style={styles.doctorName}>{doctorName}</Text>
+            {doctor?.mobile && (
+              <Text style={styles.doctorPhone}>{doctor.mobile}</Text>
+            )}
+          </View>
+        </View>
+
         <View style={styles.visitHeader}>
           <View style={styles.visitTitle}>
             <Text style={styles.visitTime}>
@@ -182,6 +242,34 @@ export default function VisitListScreen() {
             showsHorizontalScrollIndicator={false}
             style={styles.filterScroll}
           >
+            {/* TODAY FILTER */}
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                showTodayOnly && styles.filterChipActive,
+              ]}
+              onPress={() => {
+                setShowTodayOnly(true);
+                setSelectedDate(new Date().toISOString().slice(0, 10));
+              }}
+            >
+              <Ionicons 
+                name="calendar" 
+                size={14} 
+                color={showTodayOnly ? '#fff' : '#64748b'} 
+                style={{ marginRight: 4 }}
+              />
+              <Text
+                style={[
+                  styles.filterChipText,
+                  showTodayOnly && styles.filterChipTextActive,
+                ]}
+              >
+                Today
+              </Text>
+            </TouchableOpacity>
+
+            {/* STATUS FILTERS */}
             {(['ALL', 'STARTED', 'VISITED', 'COMPLETED'] as const).map(
               (status) => (
                 <TouchableOpacity
@@ -190,7 +278,10 @@ export default function VisitListScreen() {
                     styles.filterChip,
                     filterStatus === status && styles.filterChipActive,
                   ]}
-                  onPress={() => setFilterStatus(status)}
+                  onPress={() => {
+                    setFilterStatus(status);
+                    setShowTodayOnly(true);
+                  }}
                 >
                   <Text
                     style={[
@@ -324,6 +415,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterChipActive: {
     backgroundColor: '#5b66d6',
@@ -393,6 +487,41 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     padding: 12,
     marginBottom: 12,
+  },
+  doctorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  doctorAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#5b66d6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  doctorAvatarText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  doctorInfo: {
+    flex: 1,
+  },
+  doctorName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  doctorPhone: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
   },
   visitHeader: {
     flexDirection: 'row',

@@ -341,7 +341,15 @@ const renderItem = ({ item }: any) => {
   if (!item || !user) return null;
 
   return (
-    <View style={styles.tableRowContainer}>
+    <View
+  style={[
+    styles.tableRowContainer,
+    openMenuId === item._id && {
+      zIndex: 99999,
+      elevation: 999,
+    },
+  ]}
+>
       <View style={styles.tableRow}>
         <Text style={[styles.cell, { flex: 2 }]}>
           {item.firstName} {item.lastName}
