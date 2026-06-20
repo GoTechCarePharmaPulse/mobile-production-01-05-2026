@@ -12,12 +12,11 @@ export default function CompanyLayout() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  // ✅ 1. Wait for Auth to fully resolve
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
         <ActivityIndicator size="large" color="#1e40af" />
-        <Text style={{ marginTop: 10 }}>Syncing Session...</Text>
+        <Text style={{ marginTop: 10 }}>Loading Session...</Text>
       </View>
     );
   }
@@ -37,21 +36,35 @@ export default function CompanyLayout() {
         }}
       >
         <Drawer.Screen name="dashboard/index" options={{ title: "Dashboard" }} />
+
         {hasPermission(user, PERMISSIONS.users?.view) && (
           <Drawer.Screen name="organization/users/index" options={{ title: "User Management" }} />
         )}
+
         {hasPermission(user, PERMISSIONS.crm?.view) && (
           <Drawer.Screen name="crm/visits/index" options={{ title: "Visit Logs" }} />
         )}
+
         {hasPermission(user, PERMISSIONS.crm?.view) && (
           <Drawer.Screen name="crm/live-tracking/index" options={{ title: "MR Tracker" }} />
         )}
+
+        {/* ✅ MR dashboards visible for admin, manager, MR, or crm.view permission */}
+        {(user?.role === "admin" || user?.role === "manager" || user?.role === "mr" || hasPermission(user, PERMISSIONS.crm?.view)) && (
+          <Drawer.Screen name="crm/mrs/dashboard" options={{ title: "MR Dashboard" }} />
+        )}
+
+        {(user?.role === "admin" || user?.role === "manager" || user?.role === "mr" || hasPermission(user, PERMISSIONS.crm?.view)) && (
+          <Drawer.Screen name="dashboard/mr" options={{ title: "MR Analytics" }} />
+        )}
+
+        {/* ✅ Mount BackHandler inside Drawer context */}
+        <DrawerBackHandler />
       </Drawer>
 
       {/* ✅ Enhanced Dropdown Menu */}
       {open && (
         <>
-          {/* Overlay to close menu when clicking outside */}
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
           <View style={styles.dropdown}>
             <TouchableOpacity style={styles.menuItem} onPress={() => { setOpen(false); router.push("/profile"); }}>
@@ -74,16 +87,44 @@ export default function CompanyLayout() {
   );
 }
 
+/* ===============================
+   Drawer BackHandler Helper
+================================ */
+import { useEffect } from "react";
+import { BackHandler } from "react-native";
+import { useDrawerStatus } from "expo-router/drawer";
+import { useNavigation } from "expo-router";
+
+function DrawerBackHandler() {
+  const drawerStatus = useDrawerStatus();
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    const backAction = () => {
+      if (drawerStatus === "open") {
+        navigation.closeDrawer();
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
+    return () => backHandler.remove();
+  }, [drawerStatus, navigation]);
+
+  return null;
+}
+
 const styles = StyleSheet.create({
   dropdown: {
     position: "absolute",
-    top: 90, // Adjusted for header height
+    top: 90,
     right: 15,
     backgroundColor: "#fff",
     borderRadius: 12,
     width: 190,
-    zIndex: 9999, // Extremely high for Android visibility
-    elevation: 10, // Necessary for Android shadow
+    zIndex: 9999,
+    elevation: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,

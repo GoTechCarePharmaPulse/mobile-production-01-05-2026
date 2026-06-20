@@ -14,6 +14,8 @@ import {
 import { useRouter } from "expo-router";
 
 import { api } from "@/src/api/api";
+import { useMRDashboardStats } from '@/src/hooks/useMRDashboardStats';
+
 
 export default function MRDashboard() {
   const router = useRouter();

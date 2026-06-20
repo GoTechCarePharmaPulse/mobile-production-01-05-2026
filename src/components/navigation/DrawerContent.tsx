@@ -93,33 +93,22 @@ export default function DrawerContent() {
      PERMISSION CHECK
   ========================= */
 
-  const hasPermission = (
-    permission?: string
-  ) => {
-    if (!permission) {
-      return true;
-    }
+  const hasPermission = (permission?: string) => {
+  if (!permission) {
+    return true;
+  }
 
-    if (
-      user?.role === "admin"
-    ) {
-      return true;
-    }
+  if (user?.role === "admin" || user?.role === "manager" || user?.role === "mr") {
+    return true;
+  }
 
-    if (
-      user?.permissions?.includes(
-        "ALL"
-      )
-    ) {
-      return true;
-    }
+  if (user?.permissions?.includes("ALL")) {
+    return true;
+  }
 
-    return (
-      user?.permissions?.includes(
-        permission
-      ) || false
-    );
-  };
+  return user?.permissions?.includes(permission) || false;
+};
+
 
   /* =========================
      STATIC FALLBACK MENUS
@@ -175,11 +164,12 @@ export default function DrawerContent() {
         },
 
         {
-          title: "MR Dashboard",
-          path:
-            "/(tenant)/crm/mrs/dashboard",
-          icon: "grid-outline",
-        },
+  title: "MR Dashboard",
+  path: "/(tenant)/crm/mrs/dashboard",
+  icon: "grid-outline",
+  permission: "crm.view", // optional, aligns with other CRM items
+},
+
       ],
     },
   ];
@@ -229,20 +219,11 @@ export default function DrawerContent() {
      FINAL MENUS
   ========================= */
 
-  const finalMenus =
-    useMemo(() => {
-      const combined =
-        menus.length > 0
-          ? menus
-          : staticMenus;
+const finalMenus = useMemo(() => {
+  const combined = [...staticMenus, ...(menus || [])];
+  return combined.filter((menu) => hasPermission(menu.permission));
+}, [menus, user]);
 
-      return combined.filter(
-        (menu) =>
-          hasPermission(
-            menu.permission
-          )
-      );
-    }, [menus, user]);
 
   /* =========================
      TOGGLE MENU
